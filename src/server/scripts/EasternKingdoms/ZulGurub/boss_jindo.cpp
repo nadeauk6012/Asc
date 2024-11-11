@@ -31,7 +31,7 @@ enum Spells
 {
     SPELL_BRAIN_WASH_TOTEM          = 24262,
     SPELL_POWERFULL_HEALING_WARD    = 24309,
-    SPELL_HEX                       = 24053,
+    SPELL_HEX                       = 17172,
     SPELL_DELUSIONS_OF_JINDO        = 24306,
     SPELL_SUMMON_SHADE_OF_JINDO     = 24308,
     SPELL_BANISH                    = 24466,
@@ -62,7 +62,7 @@ struct boss_jindo : public BossAI
     void JustEngagedWith(Unit* who) override
     {
         BossAI::JustEngagedWith(who);
-        events.ScheduleEvent(EVENT_BRAIN_WASH_TOTEM, 23s);
+        events.ScheduleEvent(EVENT_BRAIN_WASH_TOTEM, 20s);
         events.ScheduleEvent(EVENT_POWERFULL_HEALING_WARD, 16s);
         events.ScheduleEvent(EVENT_HEX, 8s);
         events.ScheduleEvent(EVENT_DELUSIONS_OF_JINDO, 10s);
@@ -94,10 +94,9 @@ struct boss_jindo : public BossAI
 
     void EnterEvadeMode(EvadeReason evadeReason) override
     {
-        if (_EnterEvadeMode(evadeReason))
+        if (CreatureAI::_EnterEvadeMode(evadeReason))
         {
             Reset();
-            DoCastSelf(875167, true);
             me->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_STATE_DANCE);
 
             _scheduler.Schedule(4s, [this](TaskContext /*context*/)
@@ -106,26 +105,6 @@ struct boss_jindo : public BossAI
                 me->AddUnitState(UNIT_STATE_EVADE);
                 me->GetMotionMaster()->MoveTargetedHome();
             });
-        }
-    }
-
-    void JustDied(Unit* /*killer*/) override
-    {
-        std::list<Creature*> shades;
-        GetCreatureListWithEntryInGrid(shades, me, NPC_SHADE_OF_JINDO, 150.0f); 
-        for (Creature* shade : shades)
-        {
-            shade->DespawnOrUnsummon();
-        }
-        DoCastSelf(875167, true);
-        Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        for (auto const& playerPair : players)
-        {
-            Player* player = playerPair.GetSource();
-            if (player)
-            {
-                DistributeChallengeRewards(player, me, 1, false);
-            }
         }
     }
 
@@ -147,7 +126,7 @@ struct boss_jindo : public BossAI
             {
             case EVENT_BRAIN_WASH_TOTEM:
                 DoCastSelf(SPELL_BRAIN_WASH_TOTEM);
-                events.ScheduleEvent(EVENT_BRAIN_WASH_TOTEM, 20s, 28s);
+                events.ScheduleEvent(EVENT_BRAIN_WASH_TOTEM, 18s, 26s);
                 break;
             case EVENT_POWERFULL_HEALING_WARD:
                 DoCastSelf(SPELL_POWERFULL_HEALING_WARD, true);
@@ -163,7 +142,7 @@ struct boss_jindo : public BossAI
                 events.ScheduleEvent(EVENT_DELUSIONS_OF_JINDO, 4s, 12s);
                 break;
             case EVENT_TELEPORT:
-                CastSpellOnRandomTarget(SPELL_BANISH, 150.0f);
+                DoCastRandomTarget(SPELL_BANISH);
                 events.ScheduleEvent(EVENT_TELEPORT, 15s, 23s);
                 break;
             default:
@@ -172,24 +151,6 @@ struct boss_jindo : public BossAI
         }
 
         DoMeleeAttackIfReady();
-    }
-
-    void CastSpellOnRandomTarget(uint32 spellId, float range)
-    {
-        std::list<Unit*> targets;
-        Acore::AnyUnitInObjectRangeCheck check(me, range);
-        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
-        Cell::VisitAllObjects(me, searcher, range);
-
-        targets.remove_if([this](Unit* unit) -> bool {
-            return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
-            });
-
-        if (!targets.empty())
-        {
-            Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
-            DoCast(target, spellId);
-        }
     }
 
     bool CanAIAttack(Unit const* target) const override
@@ -361,4 +322,3 @@ void AddSC_boss_jindo()
     RegisterSpellScript(spell_random_aggro);
     RegisterSpellScript(spell_delusions_of_jindo);
 }
-

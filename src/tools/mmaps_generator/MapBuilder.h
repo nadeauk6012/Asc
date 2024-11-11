@@ -47,7 +47,7 @@ namespace MMAP
         uint32 m_mapId;
         std::set<uint32>* m_tiles{nullptr};
 
-        bool operator==(uint32 id)
+        bool operator==(uint32 id) const
         {
             return m_mapId == id;
         }
@@ -181,8 +181,7 @@ namespace MMAP
                            float* verts, int vertCount,
                            float* bmin, float* bmax) const;
         void getGridBounds(uint32 mapID, uint32& minX, uint32& minY, uint32& maxX, uint32& maxY) const;
-        // Dinkle: Add a vector to store your custom map IDs
-        std::vector<uint32> forcedMapIDs;
+
         bool shouldSkipMap(uint32 mapID) const;
         bool isTransportMap(uint32 mapID) const;
         bool isContinentMap(uint32 mapID) const;

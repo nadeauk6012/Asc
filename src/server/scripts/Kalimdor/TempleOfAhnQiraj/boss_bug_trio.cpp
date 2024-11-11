@@ -307,17 +307,6 @@ public:
         instance->SetData(DATA_BUG_TRIO_DEATH, 1);
         if (instance->GetData(DATA_BUG_TRIO_DEATH) < 3)
         {
-            summons.DespawnAll();
-            DoCastSelf(875167, true);
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            for (auto const& playerPair : players)
-            {
-                Player* player = playerPair.GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, 1, false);
-                }
-            }
             me->RemoveDynamicFlag(UNIT_DYNFLAG_LOOTABLE);
             DoFinalSpell();
             Talk(EMOTE_DEVOURED);
@@ -378,7 +367,7 @@ struct boss_vem : public boss_bug_trio
         {
             if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, [this](Unit* target) -> bool
                 {
-                    if (target->GetTypeId() != TYPEID_PLAYER)
+                    if (!target->IsPlayer())
                         return false;
                     if (me->IsWithinMeleeRange(target) || target == me->GetVictim())
                         return false;
@@ -509,4 +498,3 @@ void AddSC_bug_trio()
     RegisterSpellScript(spell_vem_knockback);
     RegisterSpellScript(spell_vem_vengeance);
 }
-

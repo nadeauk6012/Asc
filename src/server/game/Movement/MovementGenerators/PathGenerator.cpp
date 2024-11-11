@@ -136,7 +136,7 @@ dtPolyRef PathGenerator::GetPolyByLocation(float const* point, float* distance) 
     // we don't have it in our old path
     // try to get it by findNearestPoly()
     // first try with low search box
-    float extents[VERTEX_SIZE] = { 6.0f, 10.0f, 10.0f };    // bounds of poly search area
+    float extents[VERTEX_SIZE] = { 3.0f, 5.0f, 3.0f };    // bounds of poly search area
     float closestPoint[VERTEX_SIZE] = { 0.0f, 0.0f, 0.0f };
     if (dtStatusSucceed(_navMeshQuery->findNearestPoly(point, extents, &_filter, &polyRef, closestPoint)) && polyRef != INVALID_POLYREF)
     {
@@ -147,7 +147,7 @@ dtPolyRef PathGenerator::GetPolyByLocation(float const* point, float* distance) 
     // still nothing ..
     // try with bigger search box
     // Note that the extent should not overlap more than 128 polygons in the navmesh (see dtNavMeshQuery::findNearestPoly)
-    extents[1] = 150.0f;
+    extents[1] = 50.0f;
 
     if (dtStatusSucceed(_navMeshQuery->findNearestPoly(point, extents, &_filter, &polyRef, closestPoint)) && polyRef != INVALID_POLYREF)
     {
@@ -636,7 +636,7 @@ void PathGenerator::CreateFilter()
     uint16 includeFlags = 0;
     uint16 excludeFlags = 0;
 
-    if (_source->GetTypeId() == TYPEID_UNIT)
+    if (_source->IsCreature())
     {
         Creature* creature = (Creature*)_source;
         if (creature->CanWalk())
@@ -1038,7 +1038,7 @@ void PathGenerator::ShortenPathUntilDist(G3D::Vector3 const& target, float dist)
     if ((*_pathPoints.rbegin() - target).squaredLength() >= distSq)
         return;
 
-    size_t i = _pathPoints.size() - 1;
+    std::size_t i = _pathPoints.size() - 1;
     float x, y, z, collisionHeight = _source->GetCollisionHeight();
     // find the first i s.t.:
     //  - _pathPoints[i] is still too close

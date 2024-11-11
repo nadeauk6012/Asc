@@ -23,18 +23,14 @@ enum Spells
 {
     SPELL_SHADOWFLAME           = 22539,
     SPELL_WINGBUFFET            = 23339,
-    SPELL_SHADOWOFEBONROC       = 23340,
-    SPELL_CHARRED_EARTH         = 100272,
-    SPELL_SUMMON_PLAYER         = 20279
+    SPELL_SHADOWOFEBONROC       = 23340
 };
 
 enum Events
 {
     EVENT_SHADOWFLAME           = 1,
     EVENT_WINGBUFFET            = 2,
-    EVENT_SHADOWOFEBONROC       = 3,
-    EVENT_CHARRED_EARTH         = 4
-  //  EVENT_SUMMON_PLAYER         = 5
+    EVENT_SHADOWOFEBONROC       = 3
 };
 
 class boss_ebonroc : public CreatureScript
@@ -66,24 +62,8 @@ public:
             BossAI::JustEngagedWith(who);
 
             events.ScheduleEvent(EVENT_SHADOWFLAME, 18s);
-            events.ScheduleEvent(EVENT_WINGBUFFET, 25s);
+            events.ScheduleEvent(EVENT_WINGBUFFET, 30s);
             events.ScheduleEvent(EVENT_SHADOWOFEBONROC, 8s, 10s);
-            events.ScheduleEvent(EVENT_CHARRED_EARTH, urand(15000, 18000));
-        //    events.ScheduleEvent(EVENT_SUMMON_PLAYER, urand(18000, 20000));
-        }
-
-        void JustDied(Unit* /*killer*/) override
-        {
-            DoCastSelf(875167, true);
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            for (auto const& playerPair : players)
-            {
-                Player* player = playerPair.GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, 1, false);
-                }
-            }
         }
 
         void UpdateAI(uint32 diff) override
@@ -106,20 +86,12 @@ public:
                         break;
                     case EVENT_WINGBUFFET:
                         DoCastVictim(SPELL_WINGBUFFET);
-                        events.ScheduleEvent(EVENT_WINGBUFFET, 25s);
+                        events.ScheduleEvent(EVENT_WINGBUFFET, 30s);
                         break;
                     case EVENT_SHADOWOFEBONROC:
                         DoCastVictim(SPELL_SHADOWOFEBONROC);
                         events.ScheduleEvent(EVENT_SHADOWOFEBONROC, 8s, 10s);
                         break;
-                    case EVENT_CHARRED_EARTH:
-                        CastSpellOnRandomTarget(SPELL_CHARRED_EARTH, 100.0f);
-                        events.ScheduleEvent(EVENT_CHARRED_EARTH, urand(15000, 18000));
-                        break;
-                //    case EVENT_SUMMON_PLAYER:
-                //        CastSpellOnRandomTarget(SPELL_SUMMON_PLAYER, 100.0f);
-                //        events.ScheduleEvent(EVENT_SUMMON_PLAYER, urand(18000, 20000));
-                //        break;
                 }
 
                 if (me->HasUnitState(UNIT_STATE_CASTING))
@@ -127,23 +99,6 @@ public:
             }
 
             DoMeleeAttackIfReady();
-        }
-        void CastSpellOnRandomTarget(uint32 spellId, float range)
-        {
-            std::list<Unit*> targets;
-            Acore::AnyUnitInObjectRangeCheck check(me, range);
-            Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
-            Cell::VisitAllObjects(me, searcher, range);
-
-            targets.remove_if([this](Unit* unit) -> bool {
-                return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
-                });
-
-            if (!targets.empty())
-            {
-                Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
-                DoCast(target, spellId);
-            }
         }
     };
 

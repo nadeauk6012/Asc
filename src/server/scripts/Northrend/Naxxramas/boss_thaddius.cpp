@@ -210,7 +210,7 @@ public:
 
         void KilledUnit(Unit* who) override
         {
-            if (who->GetTypeId() != TYPEID_PLAYER)
+            if (!who->IsPlayer())
                 return;
 
             Talk(SAY_SLAY);
@@ -490,7 +490,7 @@ public:
 
         void KilledUnit(Unit* who) override
         {
-            if (who->GetTypeId() != TYPEID_PLAYER)
+            if (!who->IsPlayer())
                 return;
 
             if (pInstance)
@@ -575,7 +575,7 @@ public:
                 case EVENT_MINION_CHECK_DISTANCE:
                     if (Creature* cr = ObjectAccessor::GetCreature(*me, myCoil))
                     {
-                        if (!me->GetHomePosition().IsInDist(me, 140) && me->IsInCombat())
+                        if (!me->GetHomePosition().IsInDist(me, 28) && me->IsInCombat())
                         {
                             if (!overload)
                             {
@@ -648,7 +648,7 @@ class spell_thaddius_pos_neg_charge : public SpellScript
         if (!target)
             return;
 
-        if (target->HasAura(GetTriggeringSpell()->Id) || target->GetTypeId() != TYPEID_PLAYER)
+        if (target->HasAura(GetTriggeringSpell()->Id) || !target->IsPlayer())
         {
             SetHitDamage(0);
         }
@@ -754,7 +754,7 @@ void AddSC_boss_thaddius()
     new boss_thaddius();
     new boss_thaddius_summon();
     new npc_tesla();
- //   RegisterSpellScript(spell_thaddius_pos_neg_charge);
+    RegisterSpellScript(spell_thaddius_pos_neg_charge);
     RegisterSpellScript(spell_thaddius_polarity_shift);
     new at_thaddius_entrance();
 }

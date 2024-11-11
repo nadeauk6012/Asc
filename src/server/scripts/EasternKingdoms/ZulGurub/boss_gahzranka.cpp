@@ -65,22 +65,11 @@ public:
         void Reset() override
         {
             _Reset();
-            DoCastSelf(875167, true);
         }
 
         void JustDied(Unit* /*killer*/) override
         {
             _JustDied();
-            DoCastSelf(875167, true);
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            for (auto const& playerPair : players)
-            {
-                Player* player = playerPair.GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, 1, false);
-                }
-            }
         }
 
         void JustEngagedWith(Unit* /*who*/) override
@@ -213,4 +202,3 @@ void AddSC_boss_gahzranka()
     RegisterSpellScript(spell_gahzranka_slam);
     RegisterSpellScript(spell_pagles_point_cast);
 }
-

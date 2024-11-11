@@ -19,7 +19,6 @@
 #define DEF_BRD_H
 
 #include "CreatureAIImpl.h"
-#include "../scripts/Custom/Timewalking/10Man.h"
 
 #define DataHeader "BRD"
 #define BRDScriptName "instance_blackrock_depths"

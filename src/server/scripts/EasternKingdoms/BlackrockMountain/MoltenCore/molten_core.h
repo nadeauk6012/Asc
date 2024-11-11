@@ -19,8 +19,6 @@
 #define DEF_MOLTEN_CORE_H
 
 #include "CreatureAIImpl.h"
-#include "Object.h"
-#include "../scripts/Custom/Timewalking/10Man.h"
 
 #define DataHeader "MC"
 

@@ -157,7 +157,7 @@ public:
 
         void MoveToCorner()
         {
-            switch(me->GetEntry())
+            switch (me->GetEntry())
             {
                 case NPC_THANE_KORTHAZZ:
                     currentWaypoint = 0;
@@ -258,7 +258,7 @@ public:
 
         void KilledUnit(Unit* who) override
         {
-            if (who->GetTypeId() != TYPEID_PLAYER)
+            if (!who->IsPlayer())
                 return;
 
             Talk(SAY_SLAY);
@@ -355,7 +355,7 @@ public:
 
             if (me->GetEntry() == NPC_LADY_BLAUMEUX || me->GetEntry() == NPC_SIR_ZELIEK)
             {
-                if (Unit* pTarget = me->SelectNearestTarget(300.0f))
+                if (Unit* pTarget = me->SelectNearestPlayer(300.0f))
                 {
                     if (pTarget && me->IsValidAttackTarget(pTarget))
                     {
@@ -436,4 +436,3 @@ void AddSC_boss_four_horsemen()
     new boss_four_horsemen();
     RegisterSpellScript(spell_four_horsemen_mark_aura);
 }
-

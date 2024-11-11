@@ -26,7 +26,7 @@ enum Spells
 {
     // Viscidus - Glob of Viscidus
     SPELL_POISON_SHOCK          = 25993,
-    SPELL_POISONBOLT_VOLLEY     = 825991,
+    SPELL_POISONBOLT_VOLLEY     = 25991,
     SPELL_SUMMON_TOXIN_SLIME    = 26584,
     SPELL_SUMMON_TOXIN_SLIME_2  = 26577,
     SPELL_VISCIDUS_SLOWED       = 26034,
@@ -71,13 +71,13 @@ enum Emotes
 
 enum HitCounter
 {
-    HITCOUNTER_SLOW             = 20,
-    HITCOUNTER_SLOW_MORE        = 40,
-    HITCOUNTER_FREEZE           = 60,
+    HITCOUNTER_SLOW             = 100,
+    HITCOUNTER_SLOW_MORE        = 150,
+    HITCOUNTER_FREEZE           = 200,
 
-    HITCOUNTER_CRACK            = 20,
-    HITCOUNTER_SHATTER          = 40,
-    HITCOUNTER_EXPLODE          = 60,
+    HITCOUNTER_CRACK            = 50,
+    HITCOUNTER_SHATTER          = 100,
+    HITCOUNTER_EXPLODE          = 150,
 };
 
 enum MovePoints
@@ -136,78 +136,46 @@ struct boss_viscidus : public BossAI
         if (me->HealthBelowPct(5))
             damage = 0;
 
-        if (!attacker || effType != DIRECT_DAMAGE)
+        if (!attacker)
+        {
             return;
-
-        // Increment hit counter for the appropriate phase
-        if (_phase == PHASE_FROST && (spellSchoolMask & SPELL_SCHOOL_MASK_FROST))
-        {
-            ++_hitcounter;
-
-            if (_hitcounter >= HITCOUNTER_FREEZE)
-            {
-                Talk(EMOTE_FROZEN);
-                _hitcounter = 0; // Resetting hitcounter for next phase
-                _phase = PHASE_MELEE;
-                me->RemoveAura(SPELL_VISCIDUS_SLOWED_MORE);
-                DoCastSelf(SPELL_VISCIDUS_FREEZE);
-                events.ScheduleEvent(EVENT_RESET_PHASE, 15s);
-            }
-            else if (_hitcounter == HITCOUNTER_SLOW_MORE)
-            {
-                Talk(EMOTE_FREEZE);
-                me->RemoveAura(SPELL_VISCIDUS_SLOWED);
-                DoCastSelf(SPELL_VISCIDUS_SLOWED_MORE);
-            }
-            else if (_hitcounter == HITCOUNTER_SLOW)
-            {
-                Talk(EMOTE_SLOW);
-                DoCastSelf(SPELL_VISCIDUS_SLOWED);
-            }
         }
-        else if (_phase == PHASE_MELEE)
+
+        if (_phase != PHASE_MELEE)
         {
+            if (_phase == PHASE_FROST && effType == DIRECT_DAMAGE && (spellSchoolMask & SPELL_SCHOOL_MASK_FROST) != 0)
+            {
+                ++_hitcounter;
+            }
+
+            return;
+        }
+
+        if (effType == DIRECT_DAMAGE)
             ++_hitcounter;
 
-            if (_hitcounter >= HITCOUNTER_EXPLODE)
+        if (attacker->HasUnitState(UNIT_STATE_MELEE_ATTACKING) && _hitcounter >= HITCOUNTER_EXPLODE)
+        {
+            if (me->GetHealthPct() <= 5.f)
             {
-                // Explosion Logic
-                if (me->GetHealthPct() <= 5.f)
+                Unit::Kill(attacker, me);
+                return;
+            }
+
+            Talk(EMOTE_EXPLODE);
+            me->SetReactState(REACT_PASSIVE);
+            events.Reset();
+            _phase = PHASE_GLOB;
+            me->RemoveAura(SPELL_VISCIDUS_FREEZE);
+            DoCastSelf(SPELL_STUN_SELF, true);
+            me->AttackStop();
+            me->CastStop();
+            me->HandleEmoteCommand(EMOTE_ONESHOT_FLYDEATH); // not found in sniff, this is the best one I found
+            scheduler.Schedule(2500ms, [this](TaskContext /*context*/)
                 {
-                    Unit::Kill(attacker, me);
-                    return;
-                }
-
-                // Trigger explosion
-                TriggerExplosion();
-            }
-            else if (_hitcounter == HITCOUNTER_SHATTER)
-            {
-                Talk(EMOTE_SHATTER);
-            }
-            else if (_hitcounter == HITCOUNTER_CRACK)
-            {
-                Talk(EMOTE_CRACK);
-            }
-        }
-    }
-
-    void TriggerExplosion()
-    {
-        Talk(EMOTE_EXPLODE);
-        me->SetReactState(REACT_PASSIVE);
-        events.Reset();
-        _phase = PHASE_GLOB;
-        me->RemoveAura(SPELL_VISCIDUS_FREEZE);
-        DoCastSelf(SPELL_STUN_SELF, true);
-        me->AttackStop();
-        me->CastStop();
-        me->HandleEmoteCommand(EMOTE_ONESHOT_FLYDEATH); // not found in sniff, this is the best one I found
-        scheduler.Schedule(1000ms, [this](TaskContext /*context*/)
-            {
-                DoCastSelf(SPELL_EXPLODE_TRIGGER, true);
-            })
-            .Schedule(3000ms, [this](TaskContext /*context*/)
+                    DoCastSelf(SPELL_EXPLODE_TRIGGER, true);
+                })
+                .Schedule(3000ms, [this](TaskContext /*context*/)
                 {
                     DoCastSelf(SPELL_INVIS_SELF, true);
                     me->SetAuraStack(SPELL_VISCIDUS_SHRINKS, me, 20);
@@ -219,8 +187,12 @@ struct boss_viscidus : public BossAI
                         roomCenter.GetPositionZ(),
                         roomCenter.GetOrientation());
                 });
+        }
+        else if (_hitcounter == HITCOUNTER_SHATTER)
+            Talk(EMOTE_SHATTER);
+        else if (_hitcounter == HITCOUNTER_CRACK)
+            Talk(EMOTE_CRACK);
     }
-
 
     void SpellHit(Unit* caster, SpellInfo const* spellInfo) override
     {
@@ -232,14 +204,6 @@ struct boss_viscidus : public BossAI
         SpellSchoolMask spellSchoolMask = spellInfo->GetSchoolMask();
         if (spellInfo->EquippedItemClass == ITEM_CLASS_WEAPON && spellInfo->EquippedItemSubClassMask & (1 << ITEM_SUBCLASS_WEAPON_WAND))
         {
-            //npcbot: get bot's wand
-            if (caster->GetTypeId() == TYPEID_UNIT)
-            {
-                if (Item const* pItem = caster->ToCreature()->GetBotEquips(2/*BOT_SLOT_RANGED*/))
-                    spellSchoolMask = SpellSchoolMask(uint32(spellSchoolMask) | (1ul << pItem->GetTemplate()->Damage[0].DamageType));
-            }
-            else
-            //end npcbot
             if (Item* pItem = caster->ToPlayer()->GetWeaponForAttack(RANGED_ATTACK))
             {
                 spellSchoolMask = SpellSchoolMask(1 << pItem->GetTemplate()->Damage[0].DamageType);
@@ -286,7 +250,7 @@ struct boss_viscidus : public BossAI
                 me->RemoveAurasDueToSpell(SPELL_INVIS_SELF);
             }
 
-            int32 heal = me->GetMaxHealth() * 0.06f;
+            int32 heal = me->GetMaxHealth() * 0.05f;
             me->CastCustomSpell(me, SPELL_VISCIDUS_GROWS, &heal, nullptr, nullptr, true);
         }
 
@@ -302,22 +266,6 @@ struct boss_viscidus : public BossAI
     {
         BossAI::JustEngagedWith(who);
         InitSpells();
-    }
-
-    void JustDied(Unit* killer) override
-    {
-        summons.DespawnAll();
-
-        DoCastSelf(875167, true);
-        Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        for (auto const& playerPair : players)
-        {
-            Player* player = playerPair.GetSource();
-            if (player)
-            {
-                DistributeChallengeRewards(player, me, 1, false);
-            }
-        }
     }
 
     void InitSpells()
@@ -348,7 +296,7 @@ struct boss_viscidus : public BossAI
                     events.ScheduleEvent(EVENT_POISON_SHOCK, 7s, 12s);
                     break;
                 case EVENT_TOXIN:
-                    CastSpellOnRandomTarget(SPELL_SUMMON_TOXIN_SLIME, 150);
+                    DoCastRandomTarget(SPELL_SUMMON_TOXIN_SLIME);
                     events.ScheduleEvent(EVENT_TOXIN, 15s, 20s);
                     break;
                 case EVENT_RESET_PHASE:
@@ -368,23 +316,6 @@ struct boss_viscidus : public BossAI
 private:
     uint8 _hitcounter;
     uint8 _phase;
-    void CastSpellOnRandomTarget(uint32 spellId, float range)
-    {
-        std::list<Unit*> targets;
-        Acore::AnyUnitInObjectRangeCheck check(me, range);
-        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
-        Cell::VisitAllObjects(me, searcher, range);
-
-        targets.remove_if([this](Unit* unit) -> bool {
-            return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
-            });
-
-        if (!targets.empty())
-        {
-            Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
-            DoCast(target, spellId);
-        }
-    }
 };
 
 struct boss_glob_of_viscidus : public ScriptedAI
@@ -489,4 +420,3 @@ void AddSC_boss_viscidus()
     RegisterSpellScript(spell_explode_trigger);
     RegisterSpellScript(spell_summon_toxin_slime);
 }
-

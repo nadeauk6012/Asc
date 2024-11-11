@@ -67,48 +67,42 @@ enum Gender
 // EnumUtils: DESCRIBE THIS
 enum Races
 {
-    RACE_NONE = 0,  // SKIP
-    RACE_HUMAN = 1,  // TITLE Human
-    RACE_ORC = 2,  // TITLE Orc
-    RACE_DWARF = 3,  // TITLE Dwarf
-    RACE_NIGHTELF = 4,  // TITLE Night Elf
-    RACE_UNDEAD_PLAYER = 5,  // TITLE Undead
-    RACE_TAUREN = 6,  // TITLE Tauren
-    RACE_GNOME = 7,  // TITLE Gnome
-    RACE_TROLL = 8,  // TITLE Troll
-    RACE_GOBLIN = 9,  // TITLE Goblin
-    RACE_BLOODELF = 10, // TITLE Blood Elf
-    RACE_DRAENEI = 11, // TITLE Draenei
-    RACE_FEL_ORC = 12, // TITLE Void Elf
-    RACE_NAGA = 13, // TITLE Vulpera
-    RACE_BROKEN = 14, // TITLE Highelf
-    RACE_SKELETON = 15, // TITLE Pandaren Horde
-    RACE_VRYKUL = 16, // TITLE Worgen
-    RACE_TUSKARR = 17, // TITLE Pandaren Alliance
-    RACE_FOREST_TROLL = 18, // TITLE Troll Zandalari
-    RACE_TAUNKA = 19, // TITLE Lightforged Draenei
-    RACE_NORTHREND_SKELETON = 20, // TITLE Demon Hunter Alliance
-    RACE_ICE_TROLL = 21  // TITLE Demon Hunter Horde
+    RACE_NONE               = 0,  // SKIP
+    RACE_HUMAN              = 1,  // TITLE Human
+    RACE_ORC                = 2,  // TITLE Orc
+    RACE_DWARF              = 3,  // TITLE Dwarf
+    RACE_NIGHTELF           = 4,  // TITLE Night Elf
+    RACE_UNDEAD_PLAYER      = 5,  // TITLE Undead
+    RACE_TAUREN             = 6,  // TITLE Tauren
+    RACE_GNOME              = 7,  // TITLE Gnome
+    RACE_TROLL              = 8,  // TITLE Troll
+    //RACE_GOBLIN             = 9,
+    RACE_BLOODELF           = 10, // TITLE Blood Elf
+    RACE_DRAENEI            = 11 //, TITLE Draenei
+    //RACE_FEL_ORC        = 12,
+    //RACE_NAGA           = 13,
+    //RACE_BROKEN         = 14,
+    //RACE_SKELETON       = 15,
+    //RACE_VRYKUL         = 16,
+    //RACE_TUSKARR        = 17,
+    //RACE_FOREST_TROLL   = 18,
+    //RACE_TAUNKA         = 19,
+    //RACE_NORTHREND_SKELETON = 20,
+    //RACE_ICE_TROLL      = 21
 };
 
 // max+1 for player race
-#define MAX_RACES         22
+#define MAX_RACES         12
 
 #define RACEMASK_ALL_PLAYABLE \
     ((1<<(RACE_HUMAN-1))   |(1<<(RACE_ORC-1))          |(1<<(RACE_DWARF-1))   | \
-     (1<<(RACE_NIGHTELF-1))|(1<<(RACE_UNDEAD_PLAYER-1))|(1<<(RACE_TAUREN-1))  | \
-     (1<<(RACE_GNOME-1))   |(1<<(RACE_TROLL-1))        |(1<<(RACE_GOBLIN-1))| \
-     (1<<(RACE_BLOODELF-1))|(1<<(RACE_DRAENEI-1))      |(1<<(RACE_FEL_ORC-1))| \
-     (1<<(RACE_NAGA-1))    |(1<<(RACE_BROKEN-1))       |(1<<(RACE_SKELETON-1))| \
-     (1<<(RACE_VRYKUL-1))  |(1<<(RACE_TUSKARR-1))      |(1<<(RACE_FOREST_TROLL-1))| \
-     (1<<(RACE_TAUNKA-1))  |(1<<(RACE_NORTHREND_SKELETON-1))|(1<<(RACE_ICE_TROLL-1)))
+    (1<<(RACE_NIGHTELF-1))|(1<<(RACE_UNDEAD_PLAYER-1))|(1<<(RACE_TAUREN-1))  | \
+    (1<<(RACE_GNOME-1))   |(1<<(RACE_TROLL-1))        |(1<<(RACE_BLOODELF-1))| \
+    (1<<(RACE_DRAENEI-1)))
 
-// Added (1<<(RACE_BROKEN-1)) to RACEMASK_ALLIANCE
 #define RACEMASK_ALLIANCE \
-    ((1<<(RACE_HUMAN-1)) | (1<<(RACE_DWARF-1))  | (1<<(RACE_NIGHTELF-1)) | \
-     (1<<(RACE_GNOME-1)) | (1<<(RACE_DRAENEI-1))| (1<<(RACE_FEL_ORC-1))  | \
-     (1<<(RACE_VRYKUL-1))| (1<<(RACE_TAUNKA-1)) | (1<<(RACE_NORTHREND_SKELETON-1)) | \
-     (1<<(RACE_BROKEN-1)))
+    ((1<<(RACE_HUMAN-1)) | (1<<(RACE_DWARF-1)) | (1<<(RACE_NIGHTELF-1)) | \
+    (1<<(RACE_GNOME-1)) | (1<<(RACE_DRAENEI-1)))
 
 #define RACEMASK_HORDE RACEMASK_ALL_PLAYABLE & ~RACEMASK_ALLIANCE
 
@@ -175,14 +169,7 @@ enum UnitClass
     UNIT_CLASS_MAGE                     = 8,
 };
 
-//npcbot
-/*
-//end npcbot
 #define CLASSMASK_ALL_CREATURES ((1<<(UNIT_CLASS_WARRIOR-1)) | (1<<(UNIT_CLASS_PALADIN-1)) | (1<<(UNIT_CLASS_ROGUE-1)) | (1<<(UNIT_CLASS_MAGE-1)))
-//npcbot
-*/
-#define CLASSMASK_ALL_CREATURES CLASSMASK_ALL_PLAYABLE
-//end npcbot
 
 #define CLASSMASK_WAND_USERS ((1<<(CLASS_PRIEST-1))|(1<<(CLASS_MAGE-1))|(1<<(CLASS_WARLOCK-1)))
 
@@ -375,7 +362,7 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] =
     0xffe6cc80         //LIGHT YELLOW
 };
 
-size_t constexpr MAX_QUEST_DIFFICULTY = 5;
+std::size_t constexpr MAX_QUEST_DIFFICULTY = 5;
 uint32 constexpr QuestDifficultyColors[MAX_QUEST_DIFFICULTY] =
 {
     0xff40c040,
@@ -454,7 +441,7 @@ enum SpellAttr1 : uint32
     SPELL_ATTR1_FINISHING_MOVE_DURATION                  = 0x00400000, // TITLE Requires combo points (type 2)
     SPELL_ATTR1_IGNORE_OWNERS_DEATH                      = 0x00800000, // TITLE Unknwon attribute 23@Attr1
     SPELL_ATTR1_SPECIAL_SKILLUP                          = 0x01000000, // TITLE Fishing (client only)
-    SPELL_ATTR1_AURA_STAYS_AFTER_COMBAT                  = 0x02000000, // TITLE Unknown attribute 25@Attr1
+    SPELL_ATTR1_AURA_STAYS_AFTER_COMBAT                  = 0x02000000, // TITLE Aura stays after combat DESCRIPTION Aura will not be removed when the unit leaves combat
     SPELL_ATTR1_REQUIRE_ALL_TARGETS                      = 0x04000000, // TITLE Unknown attribute 26@Attr1 DESCRIPTION Related to [target=focus] and [target=mouseover] macros?
     SPELL_ATTR1_DISCOUNT_POWER_ON_MISS                   = 0x08000000, // TITLE Unknown attribute 27@Attr1 DESCRIPTION Melee spell?
     SPELL_ATTR1_NO_AURA_ICON                             = 0x10000000, // TITLE Hide in aura bar (client only)
@@ -519,8 +506,8 @@ enum SpellAttr3 : uint32
     SPELL_ATTR3_HIDE_CHANNEL_BAR                      = 0x00002000, // TITLE Do not display channel bar (client only)
     SPELL_ATTR3_HIDE_IN_RAID_FILTER                   = 0x00004000, // TITLE Honorless Target
     SPELL_ATTR3_NORMAL_RANGED_ATTACK                  = 0x00008000, // TITLE Unknown attribute 15@Attr3 DESCRIPTION Auto Shoot, Shoot, Throw - ranged normal attack attribute?
-    SPELL_ATTR3_SUPRESS_CASTER_PROCS                  = 0x00010000, // TITLE Cannot trigger procs
-    SPELL_ATTR3_SUPRESS_TARGET_PROCS                  = 0x00020000, // TITLE No initial aggro
+    SPELL_ATTR3_SUPPRESS_CASTER_PROCS                 = 0x00010000, // TITLE Cannot trigger procs
+    SPELL_ATTR3_SUPPRESS_TARGET_PROCS                 = 0x00020000, // TITLE No initial aggro
     SPELL_ATTR3_ALWAYS_HIT                            = 0x00040000, // TITLE Ignore hit result DESCRIPTION Spell cannot miss, or be dodged/parried/blocked
     SPELL_ATTR3_INSTANT_TARGET_PROCS                  = 0x00080000, // TITLE Cannot trigger spells during aura proc
     SPELL_ATTR3_ALLOW_AURA_WHILE_DEAD                 = 0x00100000, // TITLE Persists through death
@@ -563,7 +550,7 @@ enum SpellAttr4 : uint32
     SPELL_ATTR4_AURA_NEVER_BOUNCES                 = 0x00100000, // TITLE Allow self-cast to override stronger aura (client only)
     SPELL_ATTR4_ALLOW_ENETRING_ARENA               = 0x00200000, // TITLE Keep when entering arena
     SPELL_ATTR4_PROC_SUPPRESS_SWING_ANIM           = 0x00400000, // TITLE Unknown attribute 22@Attr4 DESCRIPTION Seal of Command (42058,57770) and Gymer's Smash 55426
-    SPELL_ATTR4_SUPRESS_WEAPON_PROCS               = 0x00800000, // TITLE Cannot trigger item spells
+    SPELL_ATTR4_SUPPRESS_WEAPON_PROCS               = 0x00800000, // TITLE Cannot trigger item spells
     SPELL_ATTR4_AUTO_RANGED_COMBAT                 = 0x01000000, // TITLE Unknown attribute 24@Attr4 DESCRIPTION Shoot-type spell?
     SPELL_ATTR4_OWNER_POWER_SCALING                = 0x02000000, // TITLE Pet Scaling aura
     SPELL_ATTR4_ONLY_FLYING_AREAS                  = 0x04000000, // TITLE Only in Outland/Northrend
@@ -593,7 +580,7 @@ enum SpellAttr5 : uint32
     SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC                   = 0x00002000, // TITLE Duration scales with Haste Rating
     SPELL_ATTR5_NOT_AVALIABLE_WHILE_CHARMED                    = 0x00004000, // TITLE Charmed units cannot cast this spell
     SPELL_ATTR5_TREAT_AS_AREA_EFFECT                           = 0x00008000, // TITLE Unknown attribute 15@Attr5 DESCRIPTION Related to multi-target spells?
-    SPELL_ATTR5_AURA_AFFECTS_NOT_JUST_REQ_EQUIPED_ITEM         = 0x00010000, // TITLE DESCRIPTION this allows spells with EquippedItemClass to affect spells from other items if the required item is equipped
+    SPELL_ATTR5_AURA_AFFECTS_NOT_JUST_REQ_EQUIPPED_ITEM        = 0x00010000, // TITLE DESCRIPTION this allows spells with EquippedItemClass to affect spells from other items if the required item is equipped
     SPELL_ATTR5_ALLOW_WHILE_FLEEING                            = 0x00020000, // TITLE Usable while feared
     SPELL_ATTR5_ALLOW_WHILE_CONFUSED                           = 0x00040000, // TITLE Usable while confused
     SPELL_ATTR5_AI_DOESNT_FACE_TARGET                          = 0x00080000, // TITLE Do not auto-turn while casting
@@ -629,7 +616,7 @@ enum SpellAttr6 : uint32
     SPELL_ATTR6_ALLOW_WHILE_RIDING_VEHICLE                 = 0x00001000, // TITLE Castable while caster is on vehicle
     SPELL_ATTR6_IGNORE_PHASE_SHIFT                         = 0x00002000, // TITLE Can target invisible units
     SPELL_ATTR6_AI_PRIMARY_RANGED_ATTACK                   = 0x00004000, // TITLE Unknown attribute 14@Attr6
-    SPELL_ATTR6_NO_PUSHBACK                                = 0x00008000, // TITLE Unknown attribute 15@Attr6 DESCRIPTION only 54368, 67892
+    SPELL_ATTR6_NO_PUSHBACK                                = 0x00008000, // TITLE Not affected by pushback DESCRIPTION Casts/Channels will not affected by pushback
     SPELL_ATTR6_NO_JUMP_PATHING                            = 0x00010000, // TITLE Unknown attribute 16@Attr6
     SPELL_ATTR6_ALLOW_EQUIP_WHILE_CASTING                  = 0x00020000, // TITLE Unknown attribute 17@Attr6 DESCRIPTION Mount related?
     SPELL_ATTR6_ORIGINATE_FROM_CONTROLLER                  = 0x00040000, // TITLE Spell is cast by charmer DESCRIPTION Client will prevent casting if not possessed, charmer will be caster for all intents and purposes
@@ -953,10 +940,7 @@ enum SpellEffects
     SPELL_EFFECT_TALENT_SPEC_SELECT                 = 162,
     SPELL_EFFECT_163                                = 163,
     SPELL_EFFECT_REMOVE_AURA                        = 164,
-    SPELL_EFFECT_LEARN_TRANSMOG_SET                 = 165,
-    SPELL_EFFECT_CREATE_AREATRIGGER                 = 166,
-    SPELL_EFFECT_JUMP_CHARGE                        = 167,
-    TOTAL_SPELL_EFFECTS                             = 168
+    TOTAL_SPELL_EFFECTS                             = 165
 };
 
 // EnumUtils: DESCRIBE THIS
@@ -3321,22 +3305,6 @@ enum SummonType
     SUMMON_TYPE_LIGHTWELL   = 11,
     SUMMON_TYPE_JEEVES      = 12
 };
-
-enum SummonSlot
-{
-    SUMMON_SLOT_PET                 = 0,
-    SUMMON_SLOT_TOTEM_FIRE          = 1,
-    SUMMON_SLOT_TOTEM_EARTH         = 2,
-    SUMMON_SLOT_TOTEM_WATER         = 3,
-    SUMMON_SLOT_TOTEM_AIR           = 4,
-    SUMMON_SLOT_MINIPET             = 5,
-    SUMMON_SLOT_QUEST               = 6,
-
-    MAX_SUMMON_SLOT
-};
-
-#define MAX_TOTEM_SLOT      5
-#define MAX_GAMEOBJECT_SLOT 4
 
 enum EventId
 {

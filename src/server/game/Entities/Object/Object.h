@@ -31,9 +31,12 @@
 #include "Position.h"
 #include "UpdateData.h"
 #include "UpdateMask.h"
+#include <memory>
 #include <set>
 #include <sstream>
 #include <string>
+
+#include "UpdateFields.h"
 
 class ElunaEventProcessor;
 
@@ -191,28 +194,31 @@ public:
     // FG: some hacky helpers
     void ForceValuesUpdateAtIndex(uint32);
 
-    //npcbot
-    virtual bool IsNPCBot() const { return false; }
-    virtual bool IsNPCBotPet() const { return false; }
-    virtual bool IsNPCBotOrPet() const { return false; }
-    //end npcbot
-
     [[nodiscard]] inline bool IsPlayer() const { return GetTypeId() == TYPEID_PLAYER; }
-    Player* ToPlayer() { if (GetTypeId() == TYPEID_PLAYER) return reinterpret_cast<Player*>(this); else return nullptr; }
-    [[nodiscard]] Player const* ToPlayer() const { if (GetTypeId() == TYPEID_PLAYER) return (Player const*)((Player*)this); else return nullptr; }
-    Creature* ToCreature() { if (GetTypeId() == TYPEID_UNIT) return reinterpret_cast<Creature*>(this); else return nullptr; }
-    [[nodiscard]] Creature const* ToCreature() const { if (GetTypeId() == TYPEID_UNIT) return (Creature const*)((Creature*)this); else return nullptr; }
+    Player* ToPlayer() { if (IsPlayer()) return reinterpret_cast<Player*>(this); else return nullptr; }
+    [[nodiscard]] Player const* ToPlayer() const { if (IsPlayer()) return reinterpret_cast<Player const*>(this); else return nullptr; }
 
-    Unit* ToUnit() { if (GetTypeId() == TYPEID_UNIT || GetTypeId() == TYPEID_PLAYER) return reinterpret_cast<Unit*>(this); else return nullptr; }
-    [[nodiscard]] Unit const* ToUnit() const { if (GetTypeId() == TYPEID_UNIT || GetTypeId() == TYPEID_PLAYER) return (Unit const*)((Unit*)this); else return nullptr; }
-    GameObject* ToGameObject() { if (GetTypeId() == TYPEID_GAMEOBJECT) return reinterpret_cast<GameObject*>(this); else return nullptr; }
-    [[nodiscard]] GameObject const* ToGameObject() const { if (GetTypeId() == TYPEID_GAMEOBJECT) return (GameObject const*)((GameObject*)this); else return nullptr; }
+    [[nodiscard]] inline bool IsCreature() const { return GetTypeId() == TYPEID_UNIT; }
+    Creature* ToCreature() { if (IsCreature()) return reinterpret_cast<Creature*>(this); else return nullptr; }
+    [[nodiscard]] Creature const* ToCreature() const { if (IsCreature()) return reinterpret_cast<Creature const*>(this); else return nullptr; }
 
-    Corpse* ToCorpse() { if (GetTypeId() == TYPEID_CORPSE) return reinterpret_cast<Corpse*>(this); else return nullptr; }
-    [[nodiscard]] Corpse const* ToCorpse() const { if (GetTypeId() == TYPEID_CORPSE) return (const Corpse*)((Corpse*)this); else return nullptr; }
+    [[nodiscard]] inline bool IsUnit() const { return isType(TYPEMASK_UNIT); }
+    Unit* ToUnit() { if (IsCreature() || IsPlayer()) return reinterpret_cast<Unit*>(this); else return nullptr; }
+    [[nodiscard]] Unit const* ToUnit() const { if (IsCreature() || IsPlayer()) return reinterpret_cast<Unit const*>(this); else return nullptr; }
 
-    DynamicObject* ToDynObject() { if (GetTypeId() == TYPEID_DYNAMICOBJECT) return reinterpret_cast<DynamicObject*>(this); else return nullptr; }
-    [[nodiscard]] DynamicObject const* ToDynObject() const { if (GetTypeId() == TYPEID_DYNAMICOBJECT) return reinterpret_cast<DynamicObject const*>(this); else return nullptr; }
+    [[nodiscard]] inline bool IsGameObject() const { return GetTypeId() == TYPEID_GAMEOBJECT; }
+    GameObject* ToGameObject() { if (IsGameObject()) return reinterpret_cast<GameObject*>(this); else return nullptr; }
+    [[nodiscard]] GameObject const* ToGameObject() const { if (IsGameObject()) return reinterpret_cast<GameObject const*>(this); else return nullptr; }
+
+    [[nodiscard]] inline bool IsCorpse() const { return GetTypeId() == TYPEID_CORPSE; }
+    Corpse* ToCorpse() { if (IsCorpse()) return reinterpret_cast<Corpse*>(this); else return nullptr; }
+    [[nodiscard]] Corpse const* ToCorpse() const { if (IsCorpse()) return reinterpret_cast<Corpse const*>(this); else return nullptr; }
+
+    [[nodiscard]] inline bool IsDynamicObject() const { return GetTypeId() == TYPEID_DYNAMICOBJECT; }
+    DynamicObject* ToDynObject() { if (IsDynamicObject()) return reinterpret_cast<DynamicObject*>(this); else return nullptr; }
+    [[nodiscard]] DynamicObject const* ToDynObject() const { if (IsDynamicObject()) return reinterpret_cast<DynamicObject const*>(this); else return nullptr; }
+
+    [[nodiscard]] inline bool IsItem() const { return GetTypeId() == TYPEID_ITEM; }
 
     virtual std::string GetDebugInfo() const;
 
@@ -414,13 +420,13 @@ public:
     void GetNearPoint(WorldObject const* searcher, float& x, float& y, float& z, float searcher_size, float distance2d, float absAngle, float controlZ = 0, Position const* startPos = nullptr) const;
     void GetVoidClosePoint(float& x, float& y, float& z, float size, float distance2d = 0, float relAngle = 0, float controlZ = 0) const;
     bool GetClosePoint(float& x, float& y, float& z, float size, float distance2d = 0, float angle = 0, WorldObject const* forWho = nullptr, bool force = false) const;
-    void MovePosition(Position& pos, float dist, float angle);
-    Position GetNearPosition(float dist, float angle);
-    void MovePositionToFirstCollision(Position& pos, float dist, float angle) const;
+    void MovePosition(Position& pos, float dist, float angle, bool disableWarning = false);
+    Position GetNearPosition(float dist, float angle, bool disableWarning = false);
+    void MovePositionToFirstCollision(Position& pos, float dist, float angle);
     Position GetFirstCollisionPosition(float startX, float startY, float startZ, float destX, float destY);
     Position GetFirstCollisionPosition(float destX, float destY, float destZ);
-    Position GetFirstCollisionPosition(float dist, float angle) const;
-    Position GetRandomNearPosition(float radius);
+    Position GetFirstCollisionPosition(float dist, float angle);
+    Position GetRandomNearPosition(float radius, bool disableWarning = false);
 
     void GetContactPoint(WorldObject const* obj, float& x, float& y, float& z, float distance2d = CONTACT_DISTANCE) const;
     void GetChargeContactPoint(WorldObject const* obj, float& x, float& y, float& z, float distance2d = CONTACT_DISTANCE) const;
@@ -485,9 +491,9 @@ public:
 
     virtual void CleanupsBeforeDelete(bool finalCleanup = true);  // used in destructor or explicitly before mass creature delete to remove cross-references to already deleted units
 
-    virtual void SendMessageToSet(WorldPacket const* data, bool self) const { if (IsInWorld()) SendMessageToSetInRange(data, GetVisibilityRange(), self, true); } // pussywizard!
-    virtual void SendMessageToSetInRange(WorldPacket const* data, float dist, bool /*self*/, bool includeMargin = false, Player const* skipped_rcvr = nullptr) const; // pussywizard!
-    virtual void SendMessageToSet(WorldPacket const* data, Player const* skipped_rcvr) const { if (IsInWorld()) SendMessageToSetInRange(data, GetVisibilityRange(), false, true, skipped_rcvr); } // pussywizard!
+    virtual void SendMessageToSet(WorldPacket const* data, bool self) const;
+    virtual void SendMessageToSetInRange(WorldPacket const* data, float dist, bool self) const;
+    virtual void SendMessageToSet(WorldPacket const* data, Player const* skipped_rcvr) const;
 
     virtual uint8 getLevelForTarget(WorldObject const* /*target*/) const { return 1; }
 
@@ -522,15 +528,7 @@ public:
 
     virtual void SetMap(Map* map);
     virtual void ResetMap();
-    [[nodiscard]] Map* GetMap() const
-    {
-        if (m_currMap == nullptr)  // Add this null check
-        {
-            return nullptr;
-        }
-        ASSERT(m_currMap);
-        return m_currMap;
-    }
+    [[nodiscard]] Map* GetMap() const { ASSERT(m_currMap); return m_currMap; }
     [[nodiscard]] Map* FindMap() const { return m_currMap; }
     //used to check all object's GetMap() calls when object is not in world!
 
@@ -603,9 +601,6 @@ public:
     [[nodiscard]] float GetTransOffsetY() const { return m_movementInfo.transport.pos.GetPositionY(); }
     [[nodiscard]] float GetTransOffsetZ() const { return m_movementInfo.transport.pos.GetPositionZ(); }
     [[nodiscard]] float GetTransOffsetO() const { return m_movementInfo.transport.pos.GetOrientation(); }
-    //npcbot: TC method transfer
-    [[nodiscard]] Position const& GetTransOffset() const { return m_movementInfo.transport.pos; }
-    //end npcbot
     [[nodiscard]] uint32 GetTransTime()   const { return m_movementInfo.transport.time; }
     [[nodiscard]] int8 GetTransSeat()     const { return m_movementInfo.transport.seat; }
     [[nodiscard]] virtual ObjectGuid GetTransGUID()   const;

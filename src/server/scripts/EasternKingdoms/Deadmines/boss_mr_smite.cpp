@@ -18,7 +18,6 @@
 #include "CreatureScript.h"
 #include "ScriptedCreature.h"
 #include "deadmines.h"
-#include "../scripts/Custom/Timewalking/10Man.h"
 
 enum Spells
 {
@@ -77,20 +76,6 @@ public:
             events.ScheduleEvent(EVENT_CHECK_HEALTH1, 500ms);
             events.ScheduleEvent(EVENT_CHECK_HEALTH2, 500ms);
             events.ScheduleEvent(EVENT_SMITE_SLAM, 3s);
-        }
-
-        void JustDied(Unit* killer) override
-        {
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            if (players.begin() != players.end())
-            {
-
-                Player* player = players.begin()->GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, 1, true);
-                }
-            }
         }
 
         void UpdateAI(uint32 diff) override

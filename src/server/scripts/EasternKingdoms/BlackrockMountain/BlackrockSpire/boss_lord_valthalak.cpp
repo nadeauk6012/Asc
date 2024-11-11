@@ -90,20 +90,6 @@ public:
             BossAI::JustDied(killer);
 
             instance->SetData(DATA_LORD_VALTHALAK, DONE);
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            if (!players.IsEmpty())
-            {
-                uint32 baseRewardLevel = 1;
-                bool isDungeon = me->GetMap()->IsDungeon();
-
-                for (auto const& playerPair : players)
-                {
-                    if (Player* player = playerPair.GetSource())
-                    {
-                        DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
-                    }
-                }
-            }
         }
 
         void StartTalking(uint32 talkGroupId, uint32 timer)

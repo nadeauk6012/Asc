@@ -52,11 +52,6 @@ public:
             _conflagrateThreat = 0.0f;
         }
 
-        void Reset() override
-        {
-            events.Reset();
-        }
-
         void JustEngagedWith(Unit* /*who*/) override
         {
             _JustEngagedWith();
@@ -66,24 +61,6 @@ public:
             events.ScheduleEvent(EVENT_THUNDERCLAP, 17s);
             events.ScheduleEvent(EVENT_PIERCE_ARMOR, 5s);
             events.ScheduleEvent(EVENT_RAGE, 1s);
-        }
-
-        void JustDied(Unit* /*killer*/) override
-        {
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            if (!players.IsEmpty())
-            {
-                uint32 baseRewardLevel = 1;
-                bool isDungeon = me->GetMap()->IsDungeon();
-
-                for (auto const& playerPair : players)
-                {
-                    if (Player* player = playerPair.GetSource())
-                    {
-                        DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
-                    }
-                }
-            }
         }
 
         void UpdateAI(uint32 diff) override
@@ -117,7 +94,7 @@ public:
                             _conflagrateThreat = me->GetThreatMgr().GetThreat(me->GetVictim());
                             me->GetThreatMgr().ModifyThreatByPercent(target, -100);
                         }
-                        events.ScheduleEvent(EVENT_CONFLAGRATION, 10s, 13s);
+                        events.ScheduleEvent(EVENT_CONFLAGRATION, 18s, 25s);
                         events.ScheduleEvent(EVENT_CHECK_CONFLAGRATION_TARGET, 10s);
                         break;
                     case EVENT_THUNDERCLAP:

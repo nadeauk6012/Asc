@@ -20,18 +20,7 @@
 #include "Player.h"
 #include "ScriptedCreature.h"
 #include "Spell.h"
-/* ScriptData
-SDName: Item_Scripts
-SD%Complete: 100
-SDComment: Items for a range of different items. See content below (in script)
-SDCategory: Items
-EndScriptData */
-
-/* ContentData
-item_flying_machine(i34060, i34061)  Engineering crafted flying machines
-item_gor_dreks_ointment(i30175)     Protecting Our Own(q10488)
-item_only_for_flight                Items which should only useable while flying
-EndContentData */
+#include "SpellMgr.h"
 
 /*#####
 # item_only_for_flight
@@ -74,26 +63,6 @@ public:
             return false;
 
         // error
-        player->SendEquipError(EQUIP_ERR_CANT_DO_RIGHT_NOW, item, nullptr);
-        return true;
-    }
-};
-
-/*#####
-# item_gor_dreks_ointment
-#####*/
-
-class item_gor_dreks_ointment : public ItemScript
-{
-public:
-    item_gor_dreks_ointment() : ItemScript("item_gor_dreks_ointment") { }
-
-    bool OnUse(Player* player, Item* item, SpellCastTargets const& targets) override
-    {
-        if (targets.GetUnitTarget() && targets.GetUnitTarget()->GetTypeId() == TYPEID_UNIT &&
-                targets.GetUnitTarget()->GetEntry() == 20748 && !targets.GetUnitTarget()->HasAura(32578))
-            return false;
-
         player->SendEquipError(EQUIP_ERR_CANT_DO_RIGHT_NOW, item, nullptr);
         return true;
     }
@@ -228,18 +197,26 @@ class item_generic_limit_chance_above_60 : public ItemScript
 public:
     item_generic_limit_chance_above_60() : ItemScript("item_generic_limit_chance_above_60") { }
 
-    bool OnCastItemCombatSpell(Player* /*player*/, Unit* /*victim*/, SpellInfo const* /*spellInfo*/, Item* /*item*/) override
+    bool OnCastItemCombatSpell(Player* /*player*/, Unit* victim, SpellInfo const* /*spellInfo*/, Item* /*item*/) override
     {
-        // Dinkle Always allow the proc, regardless of victim's level
+        // spell proc chance gets severely reduced on victims > 60 (formula unknown)
+        if (victim->GetLevel() > 60)
+        {
+            // gives ~0.1% proc chance at lvl 70
+            float const lvlPenaltyFactor = 9.93f;
+            float const failureChance = (victim->GetLevel() - 60) * lvlPenaltyFactor;
+
+            // base ppm chance was already rolled, only roll success chance
+            return !roll_chance_f(failureChance);
+        }
+
         return true;
     }
 };
 
-
 void AddSC_item_scripts()
 {
     new item_only_for_flight();
-    new item_gor_dreks_ointment();
     new item_incendiary_explosives();
     new item_mysterious_egg();
     new item_disgusting_jar();
@@ -247,4 +224,3 @@ void AddSC_item_scripts()
     new item_captured_frog();
     new item_generic_limit_chance_above_60();
 }
-

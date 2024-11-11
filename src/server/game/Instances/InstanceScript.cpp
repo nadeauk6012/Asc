@@ -16,6 +16,7 @@
  */
 
 #include "InstanceScript.h"
+#include "Chat.h"
 #include "Creature.h"
 #include "DatabaseEnv.h"
 #include "GameObject.h"
@@ -31,10 +32,6 @@
 #include "Spell.h"
 #include "WorldSession.h"
 
-//npcbot
-#include "botmgr.h"
-//end npcbot
-
 BossBoundaryData::~BossBoundaryData()
 {
     for (const_iterator it = begin(); it != end(); ++it)
@@ -43,9 +40,6 @@ BossBoundaryData::~BossBoundaryData()
 
 void InstanceScript::SaveToDB()
 {
-    if (sToCloud9Sidecar->ClusterModeEnabled() && !sToCloud9Sidecar->IsMapAssigned(instance->GetEntry()->MapID))
-        return;
-
     std::string data = GetSaveData();
     //if (data.empty()) // pussywizard: encounterMask can be updated and theres no reason to not save
     //    return;
@@ -609,7 +603,7 @@ void InstanceScript::DoSendNotifyToInstance(char const* format, ...)
 
         instance->DoForAllPlayers([&, buff](Player* player)
         {
-            player->GetSession()->SendNotification("%s", buff);
+            ChatHandler(player->GetSession()).SendNotification("{}", buff);
         });
     }
 }
@@ -645,55 +639,21 @@ void InstanceScript::DoStopTimedAchievement(AchievementCriteriaTimedTypes type, 
 void InstanceScript::DoRemoveAurasDueToSpellOnPlayers(uint32 spell)
 {
     instance->DoForAllPlayers([&](Player* player)
-        {
-            player->RemoveAurasDueToSpell(spell);
-            if (Pet* pet = player->GetPet())
-                pet->RemoveAurasDueToSpell(spell);
-            //npcbot: include bots
-            if (player->HaveBot())
-            {
-                for (auto const& bitr : *player->GetBotMgr()->GetBotMap())
-                    if (bitr.second && bitr.second->IsInWorld())
-                        DoRemoveAurasDueToSpellOnNPCBot(bitr.second, spell);
-            }
-            //end npcbot
-        });
+    {
+        player->RemoveAurasDueToSpell(spell);
+        if (Pet* pet = player->GetPet())
+            pet->RemoveAurasDueToSpell(spell);
+    });
 }
 
 // Cast spell on all players in instance
 void InstanceScript::DoCastSpellOnPlayers(uint32 spell)
 {
     instance->DoForAllPlayers([&](Player* player)
-        {
-            player->CastSpell(player, spell, true);
-            //npcbot: include bots
-            if (player->HaveBot())
-            {
-                for (auto const& bitr : *player->GetBotMgr()->GetBotMap())
-                    if (bitr.second && bitr.second->IsInWorld())
-                        DoCastSpellOnNPCBot(bitr.second, spell);
-            }
-            //end npcbot
-        });
+    {
+        player->CastSpell(player, spell, true);
+    });
 }
-
-//npcbot: hooks
-void InstanceScript::DoRemoveAurasDueToSpellOnNPCBot(Creature* bot, uint32 spell)
-{
-    ASSERT(bot && bot->IsNPCBot() && bot->IsInWorld() && !bot->IsFreeBot());
-    bot->RemoveAurasDueToSpell(spell);
-    if (Unit* botpet = bot->GetBotsPet())
-        botpet->RemoveAurasDueToSpell(spell);
-}
-
-void InstanceScript::DoCastSpellOnNPCBot(Creature* bot, uint32 spell)
-{
-    ASSERT(bot && bot->IsNPCBot() && bot->IsInWorld() && !bot->IsFreeBot());
-    bot->CastSpell(bot, spell, true);
-    if (Unit* botpet = bot->GetBotsPet())
-        botpet->CastSpell(botpet, spell, true);
-}
-//end npcbot
 
 void InstanceScript::DoCastSpellOnPlayer(Player* player, uint32 spell, bool includePets /*= false*/, bool includeControlled /*= false*/)
 {
@@ -719,7 +679,7 @@ void InstanceScript::DoCastSpellOnPlayer(Player* player, uint32 spell, bool incl
     for (auto itr2 = player->m_Controlled.begin(); itr2 != player->m_Controlled.end(); ++itr2)
     {
         if (Unit* controlled = *itr2)
-            if (controlled->IsInWorld() && controlled->GetTypeId() == TYPEID_UNIT)
+            if (controlled->IsInWorld() && controlled->IsCreature())
                 controlled->CastSpell(player, spell, true);
     }
 }
@@ -799,6 +759,24 @@ void InstanceScript::LoadInstanceSavedGameobjectStateData()
 
         } while (result->NextRow());
     }
+}
+
+bool InstanceScript::AllBossesDone() const
+{
+    for (auto const& boss : bosses)
+        if (boss.state != DONE)
+            return false;
+
+    return true;
+}
+
+bool InstanceScript::AllBossesDone(std::initializer_list<uint32> bossIds) const
+{
+    for (auto const& bossId : bossIds)
+        if (!IsBossDone(bossId))
+            return false;
+
+    return true;
 }
 
 std::string InstanceScript::GetBossStateName(uint8 state)

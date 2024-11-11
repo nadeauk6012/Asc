@@ -217,20 +217,6 @@ struct boss_mor_grayhoof : public BossAI
     {
         _JustDied();
         Talk(SAY_DEATH);
-        Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        if (!players.IsEmpty())
-        {
-            uint32 baseRewardLevel = 1;
-            bool isDungeon = me->GetMap()->IsDungeon();
-
-            for (auto const& playerPair : players)
-            {
-                if (Player* player = playerPair.GetSource())
-                {
-                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
-                }
-            }
-        }
     }
 
 protected:

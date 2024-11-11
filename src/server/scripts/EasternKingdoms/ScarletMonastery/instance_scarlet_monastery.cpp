@@ -21,11 +21,6 @@
 #include "ScriptedGossip.h"
 #include "SmartAI.h"
 #include "scarletmonastery.h"
-#include "Player.h"
-
-// Dinkle
-#include "../../Custom/Timewalking/10Man.h"
-// end Dinkle
 
 enum AshbringerEventMisc
 {
@@ -145,7 +140,7 @@ public:
 
         void SetData(uint32 type, uint32 data) override
         {
-            switch(type)
+            switch (type)
             {
                 case TYPE_MOGRAINE_AND_WHITE_EVENT:
                     if (data == IN_PROGRESS)
@@ -209,56 +204,6 @@ enum ScarletMonasteryTrashMisc
     SPELL_FORGIVENESS = 28697,
 };
 
-class npc_scarlet_guard : public CreatureScript
-{
-public:
-    npc_scarlet_guard() : CreatureScript("npc_scarlet_guard") { }
-
-    struct npc_scarlet_guardAI : public SmartAI
-    {
-        npc_scarlet_guardAI(Creature* creature) : SmartAI(creature) { }
-
-        void Reset() override
-        {
-            SayAshbringer = false;
-        }
-
-        void MoveInLineOfSight(Unit* who) override
-        {
-            if (who && who->GetDistance2d(me) < 12.0f)
-            {
-                if (Player* player = who->ToPlayer())
-                {
-                    if (player->HasAura(AURA_ASHBRINGER) && !SayAshbringer)
-                    {
-                        Talk(SAY_WELCOME);
-                        me->SetFaction(FACTION_FRIENDLY);
-                        me->SetSheath(SHEATH_STATE_UNARMED);
-                        me->SetFacingToObject(player);
-                        me->SetStandState(UNIT_STAND_STATE_KNEEL);
-                        me->AddAura(SPELL_AURA_MOD_ROOT, me);
-                        me->CastSpell(me, SPELL_AURA_MOD_ROOT, true);
-                        
-                        // Set the movement type to 0 (Idle)
-                        me->SetDefaultMovementType(IDLE_MOTION_TYPE);
-                        me->GetMotionMaster()->Initialize();
-                        SayAshbringer = true;
-                    }
-                }
-            }
-
-            SmartAI::MoveInLineOfSight(who);
-        }
-    private:
-        bool SayAshbringer = false;
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return GetScarletMonasteryAI<npc_scarlet_guardAI>(creature);
-    }
-};
-
 enum MograineEvents
 {
     EVENT_SPELL_CRUSADER_STRIKE     =   1,
@@ -270,9 +215,7 @@ enum WhitemaneEvents
 {
     EVENT_SPELL_HOLY_SMITE          =   1,
     EVENT_SPELL_POWER_WORLD_SHIELD  =   2,
-    EVENT_SPELL_HEAL                =   3,
-    //Dinkle
-    EVENT_SPELL_HOLY_FIRE           =   4,
+    EVENT_SPELL_HEAL                =   3
 };
 
 enum Spells
@@ -290,9 +233,7 @@ enum Spells
     SPELL_DOMINATE_MIND             =   14515,
     SPELL_HOLY_SMITE                =   9481,
     SPELL_HEAL                      =   12039,
-    SPELL_POWER_WORD_SHIELD         =   22187,
-    //Dinkle
-    SPELL_HOLY_FIRE                 =   15265
+    SPELL_POWER_WORD_SHIELD         =   22187
 };
 
 enum Says
@@ -376,7 +317,7 @@ public:
                     mograine->Kill(me, me, true);
                     return 0;
                 default:
-                    if(mograine)
+                    if (mograine)
                         mograine->DespawnOrUnsummon(0);
                     return 0;
             }
@@ -435,7 +376,7 @@ public:
             Talk(SAY_MO_AGGRO);
             me->CastSpell(me, SPELL_RETRIBUTION_AURA, true);
             events.ScheduleEvent(EVENT_PULL_CATHEDRAL, 1s); // Has to be done via event, otherwise mob aggroing Mograine DOES NOT aggro the room
-            events.ScheduleEvent(EVENT_SPELL_CRUSADER_STRIKE, 1s, 4s);
+            events.ScheduleEvent(EVENT_SPELL_CRUSADER_STRIKE, 1s, 5s);
             events.ScheduleEvent(EVENT_SPELL_HAMMER_OF_JUSTICE, 6s, 11s);
         }
 
@@ -527,7 +468,7 @@ public:
 
             while (uint32 eventId = events.ExecuteEvent())
             {
-                switch(eventId)
+                switch (eventId)
                 {
                     case EVENT_SPELL_CRUSADER_STRIKE:
                         me->CastSpell(me->GetVictim(), SPELL_CRUSADER_STRIKE, true);
@@ -593,9 +534,6 @@ public:
             events.ScheduleEvent(EVENT_SPELL_HOLY_SMITE, 1s, 3s);
             events.ScheduleEvent(EVENT_SPELL_POWER_WORLD_SHIELD, 6s);
             events.ScheduleEvent(EVENT_SPELL_HEAL, 9s);
-            // Dinkle
-            events.ScheduleEvent(EVENT_SPELL_HOLY_FIRE, 8s);
-
         }
 
         void DamageTaken(Unit* /*doneBy*/, uint32& damage, DamageEffectType, SpellSchoolMask) override
@@ -608,21 +546,6 @@ public:
         {
             Talk(SAY_WH_KILL);
         }
-        
-        // Dinkle
-        void JustDied(Unit* /*killer*/) override
-        {
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            for (auto const& playerPair : players)
-            {
-                Player* player = playerPair.GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, 5, true);
-                }
-            }
-        }
-        // end Dinkle
 
         void UpdateAI(uint32 diff) override
         {
@@ -695,16 +618,11 @@ public:
                         events.ScheduleEvent(EVENT_SPELL_POWER_WORLD_SHIELD, 15s);
                         break;
                     case EVENT_SPELL_HOLY_SMITE:
-                        me->CastSpell(me->GetVictim(), SPELL_HOLY_SMITE, true);
+                        me->CastSpell(me->GetVictim(), SPELL_HOLY_SMITE, false);
                         events.ScheduleEvent(EVENT_SPELL_HOLY_SMITE, 6s);
                         break;
                     case EVENT_SPELL_HEAL:
                         me->CastSpell(me, SPELL_HEAL, false);
-                        break;
-                    // Dinkle
-                    case EVENT_SPELL_HOLY_FIRE:
-                        me->CastSpell(me->GetVictim(), SPELL_HOLY_FIRE, true);
-                        events.ScheduleEvent(EVENT_SPELL_HOLY_FIRE, 8s);
                         break;
                 }
             }
@@ -770,7 +688,6 @@ public:
 void AddSC_instance_scarlet_monastery()
 {
     new instance_scarlet_monastery();
-    new npc_scarlet_guard();
     new npc_fairbanks();
     new npc_mograine();
     new boss_high_inquisitor_whitemane();

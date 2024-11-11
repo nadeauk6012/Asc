@@ -419,22 +419,9 @@ namespace VMAP
                                 continue;
                             }
 #endif
-                            // Debugging: Add logging
-                            LOG_DEBUG("maps", "Pre-Assignment: Checking Validity");
-
-                            // Debugging: Check if 'model' is valid
-                            if (!model)
-                            {
-                                LOG_ERROR("maps", "StaticMapTree::LoadMapTile() : 'model' is null");
-                                continue;  // Skip this iteration
-                            }
-
                             iTreeValues[referencedVal] = ModelInstance(spawn, model);
                             iLoadedSpawns[referencedVal] = 1;
-
-                            // Debugging: Add logging
-                            LOG_DEBUG("maps", "Post-Assignment: Successfully assigned");
-                            }
+                        }
                         else
                         {
                             ++iLoadedSpawns[referencedVal];

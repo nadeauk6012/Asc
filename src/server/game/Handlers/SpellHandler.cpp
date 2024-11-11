@@ -26,18 +26,11 @@
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
 #include "SpellMgr.h"
-#include "TemporarySummon.h"
 #include "Totem.h"
 #include "TotemPackets.h"
 #include "Vehicle.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
-
-//npcbot
-#include "bot_ai.h"
-#include "botdatamgr.h"
-#include "botmgr.h"
-//end npcbot
 
 void WorldSession::HandleClientCastFlags(WorldPacket& recvPacket, uint8 castFlags, SpellCastTargets& targets)
 {
@@ -122,14 +115,14 @@ void WorldSession::HandleUseItemOpcode(WorldPacket& recvPacket)
     }
 
     // only allow conjured consumable, bandage, poisons (all should have the 2^21 item flag set in DB)
-    if (proto->Class == ITEM_CLASS_CONSUMABLE && !(proto->Flags & ITEM_FLAG_IGNORE_DEFAULT_ARENA_RESTRICTIONS) && pUser->InArena())
+    if (proto->Class == ITEM_CLASS_CONSUMABLE && !proto->HasFlag(ITEM_FLAG_IGNORE_DEFAULT_ARENA_RESTRICTIONS) && pUser->InArena())
     {
         pUser->SendEquipError(EQUIP_ERR_NOT_DURING_ARENA_MATCH, pItem, nullptr);
         return;
     }
 
     // don't allow items banned in arena
-    if (proto->Flags & ITEM_FLAG_NOT_USEABLE_IN_ARENA && pUser->InArena())
+    if (proto->HasFlag(ITEM_FLAG_NOT_USEABLE_IN_ARENA) && pUser->InArena())
     {
         pUser->SendEquipError(EQUIP_ERR_NOT_DURING_ARENA_MATCH, pItem, nullptr);
         return;
@@ -210,7 +203,7 @@ void WorldSession::HandleOpenItemOpcode(WorldPacket& recvPacket)
     }
 
     // Verify that the bag is an actual bag or wrapped item that can be used "normally"
-    if (!(proto->Flags & ITEM_FLAG_HAS_LOOT) && !item->HasFlag(ITEM_FIELD_FLAGS, ITEM_FIELD_FLAG_WRAPPED))
+    if (!proto->HasFlag(ITEM_FLAG_HAS_LOOT) && !item->IsWrapped())
     {
         pUser->SendEquipError(EQUIP_ERR_CANT_DO_RIGHT_NOW, item, nullptr);
         LOG_ERROR("network.opcode", "Possible hacking attempt: Player {} [{}] tried to open item [{}, entry: {}] which is not openable!",
@@ -241,7 +234,7 @@ void WorldSession::HandleOpenItemOpcode(WorldPacket& recvPacket)
 
     if (sScriptMgr->OnBeforeOpenItem(pUser, item))
     {
-        if (item->HasFlag(ITEM_FIELD_FLAGS, ITEM_FIELD_FLAG_WRAPPED))// wrapped?
+        if (item->IsWrapped())// wrapped?
         {
             CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_GIFT_BY_ITEM);
             stmt->SetData(0, item->GetGUID().GetCounter());
@@ -264,7 +257,7 @@ void WorldSession::HandleOpenWrappedItemCallback(uint8 bagIndex, uint8 slot, Obj
     if (!item)
         return;
 
-    if (item->GetGUID().GetCounter() != itemLowGUID || !item->HasFlag(ITEM_FIELD_FLAGS, ITEM_FIELD_FLAG_WRAPPED)) // during getting result, gift was swapped with another item
+    if (item->GetGUID().GetCounter() != itemLowGUID || !item->IsWrapped()) // during getting result, gift was swapped with another item
         return;
 
     if (!result)
@@ -357,7 +350,7 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
 
     // ignore for remote control state (for player case)
     Unit* mover = _player->m_mover;
-    if (mover != _player && mover->GetTypeId() == TYPEID_PLAYER)
+    if (mover != _player && mover->IsPlayer())
     {
         recvPacket.rfinish(); // prevent spam at ignore packet
         return;
@@ -378,10 +371,10 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
     HandleClientCastFlags(recvPacket, castFlags, targets);
 
     // not have spell in spellbook
-    if (mover->GetTypeId() == TYPEID_PLAYER)
+    if (mover->IsPlayer())
     {
         // not have spell in spellbook or spell passive and not casted by client
-        if( !(spellInfo->Targets & TARGET_FLAG_GAMEOBJECT_ITEM) && (!mover->ToPlayer()->HasActiveSpell(spellId) || spellInfo->IsPassive()) )
+        if (!(spellInfo->Targets & TARGET_FLAG_GAMEOBJECT_ITEM) && (!mover->ToPlayer()->HasActiveSpell(spellId) || spellInfo->IsPassive()))
         {
             bool allow = false;
 
@@ -415,9 +408,9 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
         if (Vehicle* veh = mover->GetVehicleKit())
             if (const VehicleSeatEntry* seat = veh->GetSeatForPassenger(_player))
                 if (seat->m_flags & VEHICLE_SEAT_FLAG_CAN_ATTACK || spellInfo->Effects[EFFECT_0].Effect == SPELL_EFFECT_OPEN_LOCK /*allow looting from vehicle, but only if player has required spell (all necessary opening spells are in playercreateinfo_spell)*/)
-                    if ((mover->GetTypeId() == TYPEID_UNIT && !mover->ToCreature()->HasSpell(spellId)) || spellInfo->IsPassive()) // the creature can't cast that spell, check player instead
+                    if ((mover->IsCreature() && !mover->ToCreature()->HasSpell(spellId)) || spellInfo->IsPassive()) // the creature can't cast that spell, check player instead
                     {
-                        if( !(spellInfo->Targets & TARGET_FLAG_GAMEOBJECT_ITEM) && (!_player->HasActiveSpell (spellId) || spellInfo->IsPassive()) )
+                        if (!(spellInfo->Targets & TARGET_FLAG_GAMEOBJECT_ITEM) && (!_player->HasActiveSpell (spellId) || spellInfo->IsPassive()))
                         {
                             //cheater? kick? ban?
                             recvPacket.rfinish(); // prevent spam at ignore packet
@@ -425,12 +418,12 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
                         }
 
                         // at this point, player is a valid caster
-                        // swapping the mover will stop the check below at == TYPEID_UNIT, so everything works fine
+                        // swapping the mover will stop the check below at IsUnit, so everything works fine
                         mover = _player;
                     }
 
         // not have spell in spellbook or spell passive and not casted by client
-        if ((mover->GetTypeId() == TYPEID_UNIT && !mover->ToCreature()->HasSpell(spellId)) || spellInfo->IsPassive())
+        if ((mover->IsCreature() && !mover->ToCreature()->HasSpell(spellId)) || spellInfo->IsPassive())
         {
             //cheater? kick? ban?
             recvPacket.rfinish(); // prevent spam at ignore packet
@@ -679,109 +672,6 @@ void WorldSession::HandleMirrorImageDataRequest(WorldPacket& recvData)
     if (!unit)
         return;
 
-    //npcbot
-    if (unit->GetTypeId() == TYPEID_UNIT)
-    {
-        CreatureOutfitContainer const& outfits = sObjectMgr->GetCreatureOutfitMap();
-        CreatureOutfitContainer::const_iterator it = outfits.find(unit->GetEntry());
-        if (it != outfits.end())
-        {
-            WorldPacket data(SMSG_MIRRORIMAGE_DATA, 68);
-            data << guid;
-            data << uint32(unit->GetNativeDisplayId()); // displayId
-            data << uint8(it->second.race);             // race
-            data << uint8(it->second.gender);           // gender
-            data << uint8(unit->GetClass());            // class
-            data << uint8(it->second.skin);             // skin
-            data << uint8(it->second.face);             // face
-            data << uint8(it->second.hair);             // hair
-            data << uint8(it->second.haircolor);        // haircolor
-            data << uint8(it->second.facialhair);       // facialhair
-            data << uint32(0);                          // guildId
-
-            // item displays
-            for (uint8 i = 0; i != MAX_CREATURE_OUTFIT_DISPLAYS; ++i)
-                data << uint32(it->second.outfit[i]);
-
-            SendPacket(&data);
-            return;
-        }
-
-        //npcbot minion without a record in outfits table
-        //OR
-        //npcbot's mirror image
-        Creature const* bot = unit->ToCreature();
-        if (!bot->IsNPCBot() && unit->HasAuraType(SPELL_AURA_CLONE_CASTER))
-            if (Unit const* creator = unit->GetAuraEffectsByType(SPELL_AURA_CLONE_CASTER).front()->GetCaster())
-                if (creator->IsNPCBot())
-                    bot = creator->ToCreature();
-
-        if (bot->IsNPCBot())
-        {
-            NpcBotAppearanceData const* appearData = BotDataMgr::SelectNpcBotAppearance(bot->GetEntry());
-
-            WorldPacket data(SMSG_MIRRORIMAGE_DATA, 68);
-            data << guid;
-            data << uint32(bot->GetDisplayId());                                       // displayId
-            data << uint8(bot->GetRace());                                             // race
-            data << uint8(appearData ? appearData->gender : (uint8)bot->GetGender());  // gender
-            data << uint8(bot->GetBotAI()->GetPlayerClass());                          // class
-            data << uint8(appearData ? appearData->skin : 0);                          // skin
-            data << uint8(appearData ? appearData->face : 0);                          // face
-            data << uint8(appearData ? appearData->hair : 0);                          // hair
-            data << uint8(appearData ? appearData->haircolor : 0);                     // haircolor
-            data << uint8(appearData ? appearData->features : 0);                      // facialhair
-            data << uint32(0);                                                         // guildId
-
-            static uint8 const botItemSlots[MAX_CREATURE_OUTFIT_DISPLAYS] =
-            {
-                BOT_SLOT_HEAD,
-                BOT_SLOT_SHOULDERS,
-                BOT_SLOT_BODY,
-                BOT_SLOT_CHEST,
-                BOT_SLOT_WAIST,
-                BOT_SLOT_LEGS,
-                BOT_SLOT_FEET,
-                BOT_SLOT_WRIST,
-                BOT_SLOT_HANDS,
-                BOT_SLOT_BACK,
-                0//tabard
-            };
-
-            // Display items in visible slots
-            for (uint8 i = 0; i != MAX_CREATURE_OUTFIT_DISPLAYS; ++i)
-            {
-                uint8 slot = botItemSlots[i];
-                //Items not displayed on bot: tabard, head, back
-                if (slot == 0 ||
-                    (slot == BOT_SLOT_HEAD && BotMgr::ShowEquippedHelm() == false) ||
-                    (slot == BOT_SLOT_BACK && BotMgr::ShowEquippedCloak() == false))
-                {
-                    data << uint32(0);
-                    continue;
-                }
-
-                uint32 display_id = bot->GetBotAI()->GetEquipDisplayId(slot);
-                if (display_id)
-                    data << uint32(display_id);
-                else
-                {
-                    //don't allow to go naked
-                    if (slot == BOT_SLOT_CHEST)
-                        data << uint32(CHEST_HALISCAN);
-                    else if (slot == BOT_SLOT_LEGS)
-                        data << uint32(LEGS_HALISCAN);
-                    else
-                        data << uint32(0);
-                }
-            }
-
-            SendPacket(&data);
-            return;
-        }
-    }
-    //end npcbot
-
     if (!unit->HasAuraType(SPELL_AURA_CLONE_CASTER))
         return;
 
@@ -797,7 +687,7 @@ void WorldSession::HandleMirrorImageDataRequest(WorldPacket& recvData)
     data << uint8(creator->getGender());
     data << uint8(creator->getClass());
 
-    if (creator->GetTypeId() == TYPEID_PLAYER)
+    if (creator->IsPlayer())
     {
         Player* player = creator->ToPlayer();
         data << uint8(player->GetByteValue(PLAYER_BYTES, 0));   // skin

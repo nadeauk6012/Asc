@@ -103,19 +103,6 @@ struct ChaseAngle
     [[nodiscard]] bool IsAngleOkay(float relativeAngle) const;
 };
 
-struct JumpChargeParams
-{
-    union
-    {
-        float Speed;
-        float MoveTimeInSec;
-    };
-
-    bool TreatSpeedAsMoveTimeSeconds = false;
-
-    float JumpGravity = 0.0f;
-};
-
 // assume it is 25 yard per 0.6 second
 #define SPEED_CHARGE    42.0f
 
@@ -212,7 +199,7 @@ public:
     void MoveIdle();
     void MoveTargetedHome(bool walk = false);
     void MoveRandom(float wanderDistance = 0.0f);
-    void MoveFollow(Unit* target, float dist, float angle, MovementSlot slot = MOTION_SLOT_ACTIVE);
+    void MoveFollow(Unit* target, float dist, float angle, MovementSlot slot = MOTION_SLOT_ACTIVE, bool inheritWalkState = true);
     void MoveChase(Unit* target, std::optional<ChaseRange> dist = {}, std::optional<ChaseAngle> angle = {});
     void MoveChase(Unit* target, float dist, float angle) { MoveChase(target, ChaseRange(dist), ChaseAngle(angle)); }
     void MoveChase(Unit* target, float dist) { MoveChase(target, ChaseRange(dist)); }
@@ -230,8 +217,8 @@ public:
     // These two movement types should only be used with creatures having landing/takeoff animations
     void MoveLand(uint32 id, Position const& pos, float speed = 0.0f);
     void MoveLand(uint32 id, float x, float y, float z, float speed = 0.0f); // pussywizard: added for easy calling by passing 3 floats x, y, z
-    void MoveTakeoff(uint32 id, Position const& pos, float speed = 0.0f);
-    void MoveTakeoff(uint32 id, float x, float y, float z, float speed = 0.0f); // pussywizard: added for easy calling by passing 3 floats x, y, z
+    void MoveTakeoff(uint32 id, Position const& pos, float speed = 0.0f, bool skipAnimation = false);
+    void MoveTakeoff(uint32 id, float x, float y, float z, float speed = 0.0f, bool skipAnimation = false); // pussywizard: added for easy calling by passing 3 floats x, y, z
 
     void MoveCharge(float x, float y, float z, float speed = SPEED_CHARGE, uint32 id = EVENT_CHARGE, const Movement::PointsArray* path = nullptr, bool generatePath = false, float orientation = 0.0f, ObjectGuid targetGUID = ObjectGuid::Empty);
     void MoveCharge(PathGenerator const& path, float speed = SPEED_CHARGE, ObjectGuid targetGUID = ObjectGuid::Empty);
@@ -240,7 +227,6 @@ public:
     void MoveJump(Position const& pos, float speedXY, float speedZ, uint32 id = 0)
     { MoveJump(pos.m_positionX, pos.m_positionY, pos.m_positionZ, speedXY, speedZ, id); };
     void MoveJump(float x, float y, float z, float speedXY, float speedZ, uint32 id = 0, Unit const* target = nullptr);
-    void MoveJumpWithGravity(Position const& pos, float speedXY, float gravity, uint32 id = 0, Unit const* target = nullptr);
     void MoveFall(uint32 id = 0, bool addFlagForNPC = false);
 
     void MoveSeekAssistance(float x, float y, float z);
@@ -258,10 +244,6 @@ public:
     void ReinitializeMovement();
 
     bool GetDestination(float& x, float& y, float& z);
-
-    //npcbot: add an accessor for Mutate
-    void Add(MovementGenerator* m, MovementSlot slot = MOTION_SLOT_ACTIVE) { Mutate(m, slot); }
-    //end npcbot
 private:
     void Mutate(MovementGenerator* m, MovementSlot slot);                  // use Move* functions instead
 

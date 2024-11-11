@@ -25,30 +25,31 @@
 
 enum Texts
 {
-    SAY_KILL = 0,
-    SAY_RANDOM = 1,
-    SAY_DISARMED = 2,
-    SAY_MIDNIGHT_KILL = 3,
-    SAY_APPEAR = 4,
-    SAY_MOUNT = 5,
-    SAY_DEATH = 3,
+    SAY_KILL                     = 0,
+    SAY_RANDOM                   = 1,
+    SAY_DISARMED                 = 2,
+    SAY_MIDNIGHT_KILL            = 3,
+    SAY_APPEAR                   = 4,
+    SAY_MOUNT                    = 5,
+
+    SAY_DEATH                    = 3,
 
     // Midnight
-    EMOTE_CALL_ATTUMEN = 0,
-    EMOTE_MOUNT_UP = 1
+    EMOTE_CALL_ATTUMEN           = 0,
+    EMOTE_MOUNT_UP               = 1
 };
 
 enum Spells
 {
     // Attumen
-    SPELL_SHADOWCLEAVE = 29832,
-    SPELL_INTANGIBLE_PRESENCE = 29833,
-    SPELL_SPAWN_SMOKE = 10389,
-    SPELL_CHARGE = 29847,
+    SPELL_SHADOWCLEAVE           = 29832,
+    SPELL_INTANGIBLE_PRESENCE    = 29833,
+    SPELL_SPAWN_SMOKE            = 10389,
+    SPELL_CHARGE                 = 29847,
     // Midnight
-    SPELL_KNOCKDOWN = 29711,
-    SPELL_SUMMON_ATTUMEN = 29714,
-    SPELL_MOUNT = 29770,
+    SPELL_KNOCKDOWN              = 29711,
+    SPELL_SUMMON_ATTUMEN         = 29714,
+    SPELL_MOUNT                  = 29770,
     SPELL_SUMMON_ATTUMEN_MOUNTED = 29799
 };
 
@@ -98,24 +99,24 @@ struct boss_attumen : public BossAI
     void ScheduleTasks() override
     {
         scheduler.Schedule(15s, 25s, [this](TaskContext task)
-            {
-                DoCastVictim(SPELL_SHADOWCLEAVE);
-                task.Repeat(15s, 25s);
-            });
+        {
+            DoCastVictim(SPELL_SHADOWCLEAVE);
+            task.Repeat(15s, 25s);
+        });
         scheduler.Schedule(25s, 45s, [this](TaskContext task)
+        {
+            if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0))
             {
-                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0))
-                {
-                    DoCast(target, SPELL_INTANGIBLE_PRESENCE);
-                }
+                DoCast(target, SPELL_INTANGIBLE_PRESENCE);
+            }
 
-                task.Repeat(25s, 45s);
-            });
+            task.Repeat(25s, 45s);
+        });
         scheduler.Schedule(30s, 1min, [this](TaskContext task)
-            {
-                Talk(SAY_RANDOM);
-                task.Repeat(30s, 1min);
-            });
+        {
+            Talk(SAY_RANDOM);
+            task.Repeat(30s, 1min);
+        });
     }
 
     void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*damageType*/, SpellSchoolMask /*damageSchoolMask*/) override
@@ -138,7 +139,7 @@ struct boss_attumen : public BossAI
 
     void KilledUnit(Unit* victim) override
     {
-        if (victim->GetTypeId() == TYPEID_PLAYER)
+        if (victim->IsPlayer())
         {
             Talk(SAY_KILL);
         }
@@ -175,45 +176,36 @@ struct boss_attumen : public BossAI
             _phase = PHASE_MOUNTED;
             DoCastSelf(SPELL_SPAWN_SMOKE);
             scheduler.Schedule(10s, 25s, [this](TaskContext task)
+            {
+                Unit* target = nullptr;
+                std::vector<Unit*> target_list;
+                for (auto* ref : me->GetThreatMgr().GetUnsortedThreatList())
                 {
-                    Unit* target = nullptr;
-                    std::vector<Unit*> target_list;
-                    for (auto* ref : me->GetThreatMgr().GetUnsortedThreatList())
+                    target = ref->GetVictim();
+                    if (target && !target->IsWithinDist(me, 8.00f, false) && target->IsWithinDist(me, 25.0f, false))
                     {
-                        target = ref->GetVictim();
-                        if (target && !target->IsWithinDist(me, 8.00f, false) && target->IsWithinDist(me, 25.0f, false))
-                        {
-                            target_list.push_back(target);
-                        }
-                        target = nullptr;
+                        target_list.push_back(target);
                     }
-                    if (!target_list.empty())
-                    {
-                        target = Acore::Containers::SelectRandomContainerElement(target_list);
-                    }
-                    DoCast(target, SPELL_CHARGE);
-                    task.Repeat(10s, 25s);
-                });
+                    target = nullptr;
+                }
+                if (!target_list.empty())
+                {
+                    target = Acore::Containers::SelectRandomContainerElement(target_list);
+                }
+                DoCast(target, SPELL_CHARGE);
+                task.Repeat(10s, 25s);
+            });
             scheduler.Schedule(25s, 35s, [this](TaskContext task)
-                {
-                    DoCastVictim(SPELL_KNOCKDOWN);
-                    task.Repeat(25s, 35s);
-                });
+            {
+                DoCastVictim(SPELL_KNOCKDOWN);
+                task.Repeat(25s, 35s);
+            });
         }
     }
 
     void JustDied(Unit* /*killer*/) override
     {
         Talk(SAY_DEATH);
-
-        std::list<Creature*> nearbyCreatures;
-        GetCreatureListWithEntryInGrid(nearbyCreatures, me, 16151, 150.0f); 
-        for (Creature* creature : nearbyCreatures)
-        {
-            // Cast spell ID 5 on the creature
-            creature->CastSpell(creature, 5, true);
-        }
-        
         if (Creature* midnight = instance->GetCreature(DATA_MIDNIGHT))
         {
             midnight->KillSelf();
@@ -262,23 +254,23 @@ struct boss_attumen : public BossAI
                 me->GetMotionMaster()->MoveFollow(midnight, 2.0f, 0.0f);
                 Talk(SAY_MOUNT);
                 scheduler.Schedule(1s, [this](TaskContext task)
+                {
+                    if (Creature* midnight = instance->GetCreature(DATA_MIDNIGHT))
                     {
-                        if (Creature* midnight = instance->GetCreature(DATA_MIDNIGHT))
+                        if (me->IsWithinDist2d(midnight, 5.0f))
                         {
-                            if (me->IsWithinDist2d(midnight, 5.0f))
-                            {
-                                DoCastAOE(SPELL_SUMMON_ATTUMEN_MOUNTED);
-                                me->DespawnOrUnsummon(1s, 0s);
-                                midnight->SetVisible(false);
-                            }
-                            else
-                            {
-                                midnight->GetMotionMaster()->MoveFollow(me, 2.0f, 0.0f);
-                                me->GetMotionMaster()->MoveFollow(midnight, 2.0f, 0.0f);
-                                task.Repeat();
-                            }
+                            DoCastAOE(SPELL_SUMMON_ATTUMEN_MOUNTED);
+                            me->DespawnOrUnsummon(1s, 0s);
+                            midnight->SetVisible(false);
                         }
-                    });
+                        else
+                        {
+                            midnight->GetMotionMaster()->MoveFollow(me, 2.0f, 0.0f);
+                            me->GetMotionMaster()->MoveFollow(midnight, 2.0f, 0.0f);
+                            task.Repeat();
+                        }
+                    }
+                });
             }
         }
     }
@@ -305,8 +297,8 @@ struct boss_midnight : public BossAI
 
     void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*damageType*/, SpellSchoolMask /*damageSchoolMask*/) override
     {
-        // Midnight health lock only active when not mounted
-        if (_phase != PHASE_MOUNTED && damage >= me->GetHealth())
+        // Midnight never dies, let health fall to 1 and prevent further damage.
+        if (damage >= me->GetHealth())
         {
             damage = me->GetHealth() - 1;
         }
@@ -345,30 +337,12 @@ struct boss_midnight : public BossAI
     void JustEngagedWith(Unit* who) override
     {
         BossAI::JustEngagedWith(who);
-
         scheduler.Schedule(15s, 25s, [this](TaskContext task)
-            {
-                DoCastVictim(SPELL_KNOCKDOWN);
-                task.Repeat(15s, 25s);
-            });
-
-        scheduler.Schedule(3s, 3s, [this](TaskContext task)
-            {
-                std::list<Creature*> nearbyCreatures;
-                GetCreatureListWithEntryInGrid(nearbyCreatures, me, 16152, 150.0f); 
-
-                for (Creature* creature : nearbyCreatures)
-                {
-                    if (creature->isDead())
-                    {
-                        me->KillSelf();
-                        break;
-                    }
-                }
-                task.Repeat(3s);
-            });
+        {
+            DoCastVictim(SPELL_KNOCKDOWN);
+            task.Repeat(15s, 25s);
+        });
     }
-
 
     void EnterEvadeMode(EvadeReason /*why*/) override
     {
@@ -411,7 +385,7 @@ class spell_midnight_fixate : public AuraScript
 {
     PrepareAuraScript(spell_midnight_fixate)
 
-        void HandleEffectApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    void HandleEffectApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         Unit* target = GetTarget();
         if (Unit* caster = GetCaster())
@@ -442,5 +416,3 @@ void AddSC_boss_attumen()
     RegisterKarazhanCreatureAI(boss_attumen);
     RegisterSpellScript(spell_midnight_fixate);
 }
-
-

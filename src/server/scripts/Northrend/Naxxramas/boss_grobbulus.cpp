@@ -26,35 +26,35 @@
 
 enum Spells
 {
-    SPELL_POISON_CLOUD = 28240,
-    SPELL_MUTATING_INJECTION = 28169,
-    SPELL_MUTATING_EXPLOSION = 28206,
-    SPELL_SLIME_SPRAY_10 = 28157,
-    SPELL_SLIME_SPRAY_25 = 54364,
-    SPELL_POISON_CLOUD_DAMAGE_AURA_10 = 28158,
-    SPELL_POISON_CLOUD_DAMAGE_AURA_25 = 54362,
-    SPELL_BERSERK = 26662,
-    SPELL_BOMBARD_SLIME = 28280
+    SPELL_POISON_CLOUD                      = 28240,
+    SPELL_MUTATING_INJECTION                = 28169,
+    SPELL_MUTATING_EXPLOSION                = 28206,
+    SPELL_SLIME_SPRAY_10                    = 28157,
+    SPELL_SLIME_SPRAY_25                    = 54364,
+    SPELL_POISON_CLOUD_DAMAGE_AURA_10       = 28158,
+    SPELL_POISON_CLOUD_DAMAGE_AURA_25       = 54362,
+    SPELL_BERSERK                           = 26662,
+    SPELL_BOMBARD_SLIME                     = 28280
 };
 
 enum Emotes
 {
-    EMOTE_SLIME = 0
+    EMOTE_SLIME                             = 0
 };
 
 enum Events
 {
-    EVENT_BERSERK = 1,
-    EVENT_POISON_CLOUD = 2,
-    EVENT_SLIME_SPRAY = 3,
-    EVENT_MUTATING_INJECTION = 4
+    EVENT_BERSERK                           = 1,
+    EVENT_POISON_CLOUD                      = 2,
+    EVENT_SLIME_SPRAY                       = 3,
+    EVENT_MUTATING_INJECTION                = 4
 };
 
 enum Misc
 {
-    NPC_FALLOUT_SLIME = 16290,
-    NPC_SEWAGE_SLIME = 16375,
-    NPC_STICHED_GIANT = 16025
+    NPC_FALLOUT_SLIME                       = 16290,
+    NPC_SEWAGE_SLIME                        = 16375,
+    NPC_STICHED_GIANT                       = 16025
 };
 
 class boss_grobbulus : public CreatureScript
@@ -110,7 +110,7 @@ public:
 
         void SpellHitTarget(Unit* target, SpellInfo const* spellInfo) override
         {
-            if (spellInfo->Id == RAID_MODE(SPELL_SLIME_SPRAY_10, SPELL_SLIME_SPRAY_25) && target->GetTypeId() == TYPEID_PLAYER)
+            if (spellInfo->Id == RAID_MODE(SPELL_SLIME_SPRAY_10, SPELL_SLIME_SPRAY_25) && target->IsPlayer())
             {
                 me->SummonCreature(NPC_FALLOUT_SLIME, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ());
             }
@@ -130,7 +130,7 @@ public:
             summons.Despawn(summon);
         }
 
-        void JustDied(Unit* killer) override
+        void JustDied(Unit*  killer) override
         {
             BossAI::JustDied(killer);
             summons.DespawnAll();
@@ -138,7 +138,7 @@ public:
 
         void KilledUnit(Unit* who) override
         {
-            if (who->GetTypeId() == TYPEID_PLAYER && pInstance)
+            if (who->IsPlayer() && pInstance)
             {
                 pInstance->SetData(DATA_IMMORTAL_FAIL, 0);
             }
@@ -165,25 +165,25 @@ public:
 
             switch (events.ExecuteEvent())
             {
-            case EVENT_POISON_CLOUD:
-                me->CastSpell(me, SPELL_POISON_CLOUD, true);
-                events.Repeat(15s);
-                break;
-            case EVENT_BERSERK:
-                me->CastSpell(me, SPELL_BERSERK, true);
-                break;
-            case EVENT_SLIME_SPRAY:
-                Talk(EMOTE_SLIME);
-                me->CastSpell(me->GetVictim(), RAID_MODE(SPELL_SLIME_SPRAY_10, SPELL_SLIME_SPRAY_25), false);
-                events.Repeat(20s);
-                break;
-            case EVENT_MUTATING_INJECTION:
-                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 1, 100.0f, true, true, -SPELL_MUTATING_INJECTION))
-                {
-                    me->CastSpell(target, SPELL_MUTATING_INJECTION, false);
-                }
-                events.RepeatEvent(6000 + uint32(120 * me->GetHealthPct()));
-                break;
+                case EVENT_POISON_CLOUD:
+                    me->CastSpell(me, SPELL_POISON_CLOUD, true);
+                    events.Repeat(15s);
+                    break;
+                case EVENT_BERSERK:
+                    me->CastSpell(me, SPELL_BERSERK, true);
+                    break;
+                case EVENT_SLIME_SPRAY:
+                    Talk(EMOTE_SLIME);
+                    me->CastSpell(me->GetVictim(), RAID_MODE(SPELL_SLIME_SPRAY_10, SPELL_SLIME_SPRAY_25), false);
+                    events.Repeat(20s);
+                    break;
+                case EVENT_MUTATING_INJECTION:
+                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 1, 100.0f, true, true, -SPELL_MUTATING_INJECTION))
+                    {
+                        me->CastSpell(target, SPELL_MUTATING_INJECTION, false);
+                    }
+                    events.RepeatEvent(6000 + uint32(120 * me->GetHealthPct()));
+                    break;
             }
             DoMeleeAttackIfReady();
         }
@@ -217,7 +217,7 @@ public:
 
         void KilledUnit(Unit* who) override
         {
-            if (who->GetTypeId() == TYPEID_PLAYER && me->GetInstanceScript())
+            if (who->IsPlayer() && me->GetInstanceScript())
             {
                 me->GetInstanceScript()->SetData(DATA_IMMORTAL_FAIL, 0);
             }
@@ -280,15 +280,15 @@ class spell_grobbulus_mutating_injection_aura : public AuraScript
     {
         switch (GetTargetApplication()->GetRemoveMode())
         {
-        case AURA_REMOVE_BY_ENEMY_SPELL:
-        case AURA_REMOVE_BY_EXPIRE:
-            if (auto caster = GetCaster())
-            {
-                caster->CastSpell(GetTarget(), SPELL_MUTATING_EXPLOSION, true);
-            }
-            break;
-        default:
-            return;
+            case AURA_REMOVE_BY_ENEMY_SPELL:
+            case AURA_REMOVE_BY_EXPIRE:
+                if (auto caster = GetCaster())
+                {
+                    caster->CastSpell(GetTarget(), SPELL_MUTATING_EXPLOSION, true);
+                }
+                break;
+            default:
+                return;
         }
     }
 

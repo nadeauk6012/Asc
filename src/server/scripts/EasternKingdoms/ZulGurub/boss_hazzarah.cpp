@@ -70,11 +70,6 @@ struct boss_hazzarah : public BossAI
         summon->DespawnOrUnsummon();
     }
 
-    void Reset() override
-    {
-        DoCastSelf(875167, true); 
-    }
-
     void JustEngagedWith(Unit* /*who*/) override
     {
         _JustEngagedWith();
@@ -82,20 +77,6 @@ struct boss_hazzarah : public BossAI
         events.ScheduleEvent(EVENT_EARTH_SHOCK, 8s, 18s);
         events.ScheduleEvent(EVENT_CHAIN_BURN, 12s, 28s);
         events.ScheduleEvent(EVENT_ILLUSIONS, 16s, 24s);
-    }
-
-    void JustDied(Unit* /*killer*/) override
-    {
-        DoCastSelf(875167, true);
-        Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        for (auto const& playerPair : players)
-        {
-            Player* player = playerPair.GetSource();
-            if (player)
-            {
-                DistributeChallengeRewards(player, me, 1, false);
-            }
-        }
     }
 
     bool CanAIAttack(Unit const* target) const override
@@ -188,4 +169,3 @@ void AddSC_boss_hazzarah()
     RegisterZulGurubCreatureAI(boss_hazzarah);
     RegisterSpellScript(spell_chain_burn);
 }
-

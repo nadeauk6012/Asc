@@ -55,185 +55,14 @@ enum MageSpells
     SPELL_MAGE_SUMMON_WATER_ELEMENTAL_PERMANENT  = 70908,
     SPELL_MAGE_SUMMON_WATER_ELEMENTAL_TEMPORARY  = 70907,
     SPELL_MAGE_GLYPH_OF_BLAST_WAVE               = 62126,
-    SPELL_MAGE_FINGERS_OF_FROST                  = 44543,
-    SPELL_TOUCH_OF_THE_MAGI_AURA                 = 844457
+    SPELL_MAGE_FINGERS_OF_FROST                  = 44543
 };
-
-
-
-class Icicles : public PlayerScript
-{
-public:
-    Icicles() : PlayerScript("Icicles") {}
-
-    uint32 SPELL_AURA_FROST_STACK = 100240;
-    std::unordered_set<uint32> SPELL_ICE_LANCE = { 100241, 100242, 100243 };
-
-    std::unordered_set<uint32> SPELL_FROSTBOLT = {
-        116, 205, 837, 7322, 8406, 8407, 8408, 10179, 10180, 10181, 25304, 27071, 27072, 38697, 42841, 42842, 844614
-    };
-
-    std::unordered_set<uint32> SPELL_FROSTFIREBOLT = {
-        44614, 47610
-    };
-
-    void OnSpellCast(Player* player, Spell* spell, bool skipCheck) override
-    {
-        uint32 spellId = spell->GetSpellInfo()->Id;
-
-        if (SPELL_FROSTBOLT.find(spellId) != SPELL_FROSTBOLT.end() ||
-            SPELL_FROSTFIREBOLT.find(spellId) != SPELL_FROSTFIREBOLT.end())
-        {
-            for (auto iceLanceSpell : SPELL_ICE_LANCE)
-            {
-                if (player->HasSpell(iceLanceSpell))
-                {
-                    if (rand() % 100 < 66)
-                    {
-                        return;
-                    }
-
-                    Aura* aura = player->GetAura(SPELL_AURA_FROST_STACK);
-                    if (!aura)
-                    {
-                        player->AddAura(SPELL_AURA_FROST_STACK, player);
-                    }
-                    else if (aura->GetStackAmount() < 6)  // Check to prevent adding more than 6 stacks
-                    {
-                        aura->ModStackAmount(1);
-                    }
-                    break;
-                }
-            }
-        }
-        else if (SPELL_ICE_LANCE.find(spellId) != SPELL_ICE_LANCE.end())
-        {
-            Aura* aura = player->GetAura(SPELL_AURA_FROST_STACK);
-            if (!aura || aura->GetStackAmount() < 6)
-            {
-                // Cancel the spell if the player doesn't have enough stacks
-                spell->cancel();
-                return;
-            }
-
-            // Remove the stacks when the spell is used
-            player->RemoveAura(SPELL_AURA_FROST_STACK);
-        }
-    }
-};
-
-void AddSC_Icicles()
-{
-    new Icicles();
-}
-
-class AlterTime : public PlayerScript
-{
-public:
-    AlterTime() : PlayerScript("AlterTime") {}
-
-    uint32 SAVE_LOCATION_SPELL = 100252;
-    uint32 TELEPORT_BACK_DURATION = 10;
-    std::vector<uint32> SPELL_ON_TELEPORT = { 54139, 51150, 52662 };
-
-    struct SavedState
-    {
-        uint32 mapId;
-        float x;
-        float y;
-        float z;
-        float orientation;
-        uint32 health;
-        uint32 mana;
-        std::map<uint32, int32> auras;
-    };
-
-    std::unordered_map<ObjectGuid, SavedState> savedStates;
-
-    void OnSpellCast(Player* player, Spell* spell, bool skipCheck) override
-    {
-        if (spell->GetSpellInfo()->Id == SAVE_LOCATION_SPELL)
-        {
-            SavedState& savedState = savedStates[player->GetGUID()];
-            if (!savedState.auras.empty())
-            {
-                return;
-            }
-
-            savedState.mapId = player->GetMapId();
-            savedState.x = player->GetPositionX();
-            savedState.y = player->GetPositionY();
-            savedState.z = player->GetPositionZ();
-            savedState.orientation = player->GetOrientation();
-            savedState.health = player->GetHealth();
-            savedState.mana = player->GetPower(POWER_MANA);
-
-            for (auto& auraApplication : player->GetAppliedAuras())
-            {
-                if (auraApplication.second->GetBase()->IsPassive())
-                    continue;
-
-                Aura* aura = auraApplication.second->GetBase();
-                savedState.auras[aura->GetId()] = aura->GetDuration();
-                // player->RemoveAura(aura->GetId()); // This line removed to keep auras active
-            }
-
-            player->m_Events.AddEventAtOffset([this, playerGuid = player->GetGUID()] { TeleportBack(playerGuid); }, std::chrono::seconds(TELEPORT_BACK_DURATION));
-        }
-    }
-
-    void TeleportBack(ObjectGuid playerGuid)
-    {
-        Player* player = ObjectAccessor::FindPlayer(playerGuid);
-        if (!player)
-        {
-            savedStates.erase(playerGuid);
-            return;
-        }
-
-        SavedState& savedState = savedStates[playerGuid];
-
-        player->TeleportTo(savedState.mapId, savedState.x, savedState.y, savedState.z, savedState.orientation);
-        player->SetHealth(savedState.health);
-        player->SetPower(POWER_MANA, savedState.mana);
-
-        if (!player->IsAlive())
-        {
-            player->ResurrectPlayer(10);
-        }
-
-        for (auto& pair : savedState.auras)
-        {
-            if (Aura* aura = player->AddAura(pair.first, player))
-            {
-                aura->SetDuration(pair.second);
-            }
-        }
-
-        for (uint32 spellId : SPELL_ON_TELEPORT)
-        {
-            player->CastSpell(player, spellId, true);
-        }
-
-        savedStates.erase(playerGuid);
-    }
-};
-
-void AddSC_AlterTime()
-{
-    new AlterTime();
-}
-
 
 class spell_mage_arcane_blast : public SpellScript
 {
     PrepareSpellScript(spell_mage_arcane_blast);
 
-    bool Load() override
-    {
-        _triggerSpellId = 0;
-        return true;
-    }
+    bool Load() override { _triggerSpellId = 0; return true; }
 
     void HandleTriggerSpell(SpellEffIndex effIndex)
     {
@@ -243,20 +72,7 @@ class spell_mage_arcane_blast : public SpellScript
 
     void HandleAfterCast()
     {
-        // Original functionality
         GetCaster()->CastSpell(GetCaster(), _triggerSpellId, TRIGGERED_FULL_MASK);
-
-        if (Unit* target = GetExplTargetUnit()) // Get the target of the Arcane Blast spell
-        {
-            if (Aura* aura = target->GetAura(SPELL_TOUCH_OF_THE_MAGI_AURA, GetCaster()->GetGUID()))
-            {
-                aura->SetStackAmount(aura->GetStackAmount() + 1); // Increase stack amount
-
-                // Extend the duration of the aura by 1 second
-                const int32 newDuration = aura->GetDuration() + 1000; // 1000 milliseconds = 1 second
-                aura->SetDuration(newDuration);
-            }
-        }
     }
 
     void Register() override
@@ -269,7 +85,6 @@ class spell_mage_arcane_blast : public SpellScript
 private:
     uint32 _triggerSpellId;
 };
-
 
 class spell_mage_burning_determination : public AuraScript
 {
@@ -452,7 +267,7 @@ class spell_mage_pet_scaling : public AuraScript
             amount = CalculatePct(std::max<int32>(0, frost), 33);
 
             // xinef: Update appropriate player field
-            if (owner->GetTypeId() == TYPEID_PLAYER)
+            if (owner->IsPlayer())
                 owner->SetUInt32Value(PLAYER_PET_SPELL_POWER, (uint32)amount);
         }
     }
@@ -644,7 +459,7 @@ class spell_mage_cold_snap : public SpellScript
 
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     void HandleDummy(SpellEffIndex /*effIndex*/)
@@ -921,9 +736,9 @@ class spell_mage_living_bomb : public AuraScript
 
     void AfterRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
     {
-       // AuraRemoveMode removeMode = GetTargetApplication()->GetRemoveMode();
-       // if (removeMode != AURA_REMOVE_BY_ENEMY_SPELL && removeMode != AURA_REMOVE_BY_EXPIRE)
-       //     return;
+        AuraRemoveMode removeMode = GetTargetApplication()->GetRemoveMode();
+        if (removeMode != AURA_REMOVE_BY_ENEMY_SPELL && removeMode != AURA_REMOVE_BY_EXPIRE)
+            return;
 
         if (Unit* caster = GetCaster())
             caster->CastSpell(GetTarget(), uint32(aurEff->GetAmount()), true, nullptr, aurEff);
@@ -1069,7 +884,7 @@ class spell_mage_polymorph_cast_visual : public SpellScript
     void HandleDummy(SpellEffIndex /*effIndex*/)
     {
         if (Unit* target = GetCaster()->FindNearestCreature(NPC_AUROSALIA, 30.0f))
-            if (target->GetTypeId() == TYPEID_UNIT)
+            if (target->IsCreature())
                 target->CastSpell(target, PolymorhForms[urand(0, 5)], true);
     }
 
@@ -1106,11 +921,6 @@ class spell_mage_summon_water_elemental : public SpellScript
     void HandleDummy(SpellEffIndex /*effIndex*/)
     {
         Unit* caster = GetCaster();
-
-        //npcbot: prevent default handler for bots
-        if (caster->IsNPCBot())
-            return;
-        //end npcbot
 
         if (Creature* pet = ObjectAccessor::GetCreature(*caster, caster->GetPetGUID()))
             if (!pet->IsAlive())
@@ -1272,7 +1082,4 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_summon_water_elemental);
     RegisterSpellScript(spell_mage_fingers_of_frost_proc_aura);
     RegisterSpellScript(spell_mage_fingers_of_frost_proc);
-    AddSC_AlterTime();
-    AddSC_Icicles();
 }
-

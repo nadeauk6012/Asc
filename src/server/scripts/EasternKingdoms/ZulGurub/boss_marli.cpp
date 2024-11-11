@@ -81,7 +81,6 @@ public:
 
     void Reset() override
     {
-        DoCastSelf(875167, true);
         if (_phase == PHASE_SPIDER)
         {
             me->RemoveAura(SPELL_SPIDER_FORM);
@@ -131,16 +130,6 @@ public:
     {
         BossAI::JustDied(killer);
         Talk(SAY_DEATH);
-        DoCastSelf(875167, true);
-        Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        for (auto const& playerPair : players)
-        {
-            Player* player = playerPair.GetSource();
-            if (player)
-            {
-                DistributeChallengeRewards(player, me, 1, false);
-            }
-        }
     }
 
 private:
@@ -228,7 +217,7 @@ private:
     {
         Unit* target = SelectTarget(SelectTargetMethod::Random, 0, [this](Unit* target) -> bool
             {
-                if (target->GetTypeId() != TYPEID_PLAYER || target->getPowerType() != Powers::POWER_MANA)
+                if (!target->IsPlayer() || target->getPowerType() != Powers::POWER_MANA)
                     return false;
                 if (me->IsWithinMeleeRange(target) || me->GetVictim() == target)
                     return false;
@@ -310,7 +299,7 @@ class spell_enveloping_webs : public SpellScript
     {
         Unit* caster = GetCaster();
         Unit* hitUnit = GetHitUnit();
-        if (caster && hitUnit && hitUnit->GetTypeId() == TYPEID_PLAYER)
+        if (caster && hitUnit && hitUnit->IsPlayer())
         {
             caster->GetThreatMgr().ModifyThreatByPercent(hitUnit, -100);
         }
@@ -354,4 +343,3 @@ void AddSC_boss_marli()
     RegisterSpellScript(spell_enveloping_webs);
     RegisterSpellScript(spell_marli_transform);
 }
-

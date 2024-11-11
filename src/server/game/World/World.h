@@ -31,7 +31,6 @@
 #include <atomic>
 #include <list>
 #include <map>
-#include <set>
 #include <unordered_map>
 
 class Object;
@@ -238,16 +237,11 @@ public:
     void SetInitialWorldSettings() override;
     void LoadConfigSettings(bool reload = false) override;
 
-    void SendWorldText(uint32 string_id, ...) override;
-    void SendGlobalText(const char* text, WorldSession* self) override;
-    void SendGMText(uint32 string_id, ...) override;
     void SendGlobalMessage(WorldPacket const* packet, WorldSession* self = nullptr, TeamId teamId = TEAM_NEUTRAL) override;
     void SendGlobalGMMessage(WorldPacket const* packet, WorldSession* self = nullptr, TeamId teamId = TEAM_NEUTRAL) override;
     bool SendZoneMessage(uint32 zone, WorldPacket const* packet, WorldSession* self = nullptr, TeamId teamId = TEAM_NEUTRAL) override;
     void SendZoneText(uint32 zone, const char* text, WorldSession* self = nullptr, TeamId teamId = TEAM_NEUTRAL) override;
     void SendServerMessage(ServerMessageType messageID, std::string stringParam = "", Player* player = nullptr) override;
-
-    void SendWorldTextOptional(uint32 string_id, uint32 flag, ...) override;
 
     /// Are we in the middle of a shutdown?
     [[nodiscard]] bool IsShuttingDown() const override { return _shutdownTimer > 0; }
@@ -349,12 +343,6 @@ public:
 
     void RemoveOldCorpses() override;
 
-    //Dinkle
-    static float globalRespawnMultiplier;
-    static float dungeonRespawnMultiplier;
-    static float raidRespawnMultiplier;
-    uint32 GetBonusPetTalentPoints() const override; 
-    // end Dinkle
     void DoForAllOnlinePlayers(std::function<void(Player*)> exec) override;
 
 protected:
@@ -375,7 +363,6 @@ protected:
     void CalendarDeleteOldEvents();
     void ResetGuildCap();
 private:
-    uint32 _bonusPetTalentPoints;
     static std::atomic_long _stopEvent;
     static uint8 _exitCode;
     uint32 _shutdownTimer;

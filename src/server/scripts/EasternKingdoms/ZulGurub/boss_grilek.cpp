@@ -59,7 +59,6 @@ public:
         {
             _pursuitTargetGUID.Clear();
             BossAI::Reset();
-            DoCastSelf(875167, true);
         }
 
         void JustEngagedWith(Unit* /*who*/) override
@@ -69,20 +68,6 @@ public:
             events.ScheduleEvent(EVENT_GROUND_TREMOR, 15s, 25s);
             events.ScheduleEvent(EVENT_ENTANGLING_ROOTS, 5s, 15s);
             events.ScheduleEvent(EVENT_SWEEPING_STRIKES, 30s);
-        }
-
-        void JustDied(Unit* /*killer*/) override
-        {
-            DoCastSelf(875167, true);
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            for (auto const& playerPair : players)
-            {
-                Player* player = playerPair.GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, 1, false);
-                }
-            }
         }
 
         void UpdateAI(uint32 diff) override

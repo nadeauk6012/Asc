@@ -23,13 +23,6 @@
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
-#include "ScriptMgr.h" 
-
- //npcbot
-#include "Creature.h"
-#include "Group.h"
-//end npcbot
-
 /*
  * Scripts for spells with SPELLFAMILY_DRUID and SPELLFAMILY_GENERIC spells used by druid players.
  * Ordered alphabetically using scriptname.
@@ -362,7 +355,7 @@ class spell_dru_treant_scaling : public AuraScript
             amount = CalculatePct(std::max<int32>(0, nature), 15);
 
             // xinef: Update appropriate player field
-            if (owner->GetTypeId() == TYPEID_PLAYER)
+            if (owner->IsPlayer())
                 owner->SetUInt32Value(PLAYER_PET_SPELL_POWER, (uint32)amount);
         }
     }
@@ -798,11 +791,7 @@ class spell_dru_rip : public AuraScript
     bool Load() override
     {
         Unit* caster = GetCaster();
-        //npcbot
-        if (caster && caster->IsNPCBot())
-            return true;
-        //end npcbot
-        return caster && caster->GetTypeId() == TYPEID_PLAYER;
+        return caster && caster->IsPlayer();
     }
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
@@ -811,22 +800,6 @@ class spell_dru_rip : public AuraScript
 
         if (Unit* caster = GetCaster())
         {
-            //npcbot
-            if (caster && caster->IsNPCBot())
-            {
-                uint8 botcp = caster->ToCreature()->GetCreatureComboPoints();
-                // Idol of Feral Shadows. Can't be handled as SpellMod due its dependency from CPs
-                if (AuraEffect const* auraEffIdolOfFeralShadows = caster->GetAuraEffect(SPELL_DRUID_IDOL_OF_FERAL_SHADOWS, EFFECT_0))
-                    amount += botcp * auraEffIdolOfFeralShadows->GetAmount();
-                // Idol of Worship. Can't be handled as SpellMod due its dependency from CPs
-                else if (AuraEffect const* auraEffIdolOfWorship = caster->GetAuraEffect(SPELL_DRUID_IDOL_OF_WORSHIP, EFFECT_0))
-                    amount += botcp * auraEffIdolOfWorship->GetAmount();
-
-                amount += int32(CalculatePct(caster->GetTotalAttackPowerValue(BASE_ATTACK), botcp));
-                return;
-            }
-            //end npcbot
-
             // 0.01 * $AP * cp
             uint8 cp = caster->ToPlayer()->GetComboPoints();
 
@@ -963,7 +936,7 @@ class spell_dru_starfall_dummy : public SpellScript
             return;
         }
 
-        // Any effect which causes you to lose control of your character will supress the starfall effect.
+        // Any effect which causes you to lose control of your character will suppress the starfall effect.
         if (caster->HasUnitState(UNIT_STATE_CONTROLLED))
             return;
 
@@ -1032,7 +1005,7 @@ class spell_dru_swift_flight_passive : public AuraScript
 
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
@@ -1044,7 +1017,7 @@ class spell_dru_swift_flight_passive : public AuraScript
 
     void Register() override
     {
-        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dru_swift_flight_passive::CalculateAmount, EFFECT_1, SPELL_AURA_MOD_INCREASE_VEHICLE_FLIGHT_SPEED);
+        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dru_swift_flight_passive::CalculateAmount, EFFECT_1, SPELL_AURA_MOD_INCREASE_FLIGHT_SPEED);
     }
 };
 
@@ -1090,50 +1063,11 @@ class spell_dru_t10_restoration_4p_bonus : public SpellScript
 
     bool Load() override
     {
-        //npcbot
-        if (GetCaster()->IsNPCBot())
-            return true;
-        //end npcbot
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     void FilterTargets(std::list<WorldObject*>& targets)
     {
-        //npcbot
-        if (Creature* bot = GetCaster()->ToCreature())
-        {
-            if (bot->IsFreeBot())
-            {
-                targets.clear();
-                targets.push_back(bot);
-                return;
-            }
-
-            targets.remove(GetExplTargetUnit());
-            std::list<Unit*> tempTargets;
-            Group const* gr = bot->GetBotOwner()->GetGroup();
-            if (gr && !gr->IsMember(bot->GetGUID()))
-                gr = nullptr;
-
-            if (gr)
-                for (std::list<WorldObject*>::const_iterator itr = targets.begin(); itr != targets.end(); ++itr)
-                    if (gr->IsMember((*itr)->GetGUID()))
-                        tempTargets.push_back((*itr)->ToUnit());
-
-            if (tempTargets.empty())
-            {
-                targets.clear();
-                FinishCast(SPELL_FAILED_DONT_REPORT);
-                return;
-            }
-
-            tempTargets.sort(Acore::HealthPctOrderPred());
-            targets.clear();
-            targets.push_back(tempTargets.front());
-            return;
-        }
-        //end npcbot
-
         if (!GetCaster()->ToPlayer()->GetGroup())
         {
             targets.clear();
@@ -1217,7 +1151,7 @@ class spell_dru_berserk : public SpellScript
     {
         Unit* caster = GetCaster();
 
-        if (caster->GetTypeId() == TYPEID_PLAYER)
+        if (caster->IsPlayer())
         {
             // Remove tiger fury / mangle(bear)
             const uint32 TigerFury[6] = { 5217, 6793, 9845, 9846, 50212, 50213 };
@@ -1296,4 +1230,3 @@ void AddSC_druid_spell_scripts()
     RegisterSpellScript(spell_dru_wild_growth);
     RegisterSpellScript(spell_dru_moonkin_form_passive_proc);
 }
-

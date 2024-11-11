@@ -67,7 +67,6 @@
 #    PLAYER DUMP
 #    CUSTOM
 #    DEBUG
-#    Clustering
 #
 ###################################################################################################
 
@@ -140,13 +139,13 @@ CharacterDatabase.WorkerThreads = 1
 #    WorldDatabase.SynchThreads
 #    CharacterDatabase.SynchThreads
 #        Description: The amount of MySQL connections spawned to handle.
-#        Default:     1 - (LoginDatabase.WorkerThreads)
-#                     1 - (WorldDatabase.WorkerThreads)
-#                     2 - (CharacterDatabase.WorkerThreads)
+#        Default:     1 - (LoginDatabase.SynchThreads)
+#                     1 - (WorldDatabase.SynchThreads)
+#                     1 - (CharacterDatabase.SynchThreads)
 
 LoginDatabase.SynchThreads     = 1
 WorldDatabase.SynchThreads     = 1
-CharacterDatabase.SynchThreads = 2
+CharacterDatabase.SynchThreads = 1
 
 #
 #    MaxPingTime
@@ -658,7 +657,6 @@ Appender.Server=2,5,0,Server.log,w
 # Appender.GM=2,5,15,gm_%s.log
 Appender.Errors=2,5,0,Errors.log
 # Appender.DB=3,5,0
-Appender.NpcBots=1,2,0
 
 #  Logger config values: Given a logger "name"
 #    Logger.name
@@ -699,6 +697,26 @@ Logger.spells.scripts=2,Console Errors
 #Logger.bg.battleground=4,Console Server
 #Logger.bg.reportpvpafk=4,Console Server
 #Logger.calendar=4,Console Server
+#Logger.chat.say=4,Console Chat
+#Logger.chat.emote=4,Console Chat
+#Logger.chat.yell=4,Console Chat
+#Logger.chat.whisper=4,Console Chat
+#Logger.chat.party=4,Console Chat
+#Logger.chat.raid=4,Console Chat
+#Logger.chat.bg=4,Console Chat
+#Logger.chat.guild=4,Console Chat
+#Logger.chat.guild.officer=4,Console Chat
+#Logger.chat.channel=4,Console Chat
+#Logger.chat.addon.msg=4,Console Chat
+#Logger.chat.addon.emote=4,Console Chat
+#Logger.chat.addon.yell=4,Console Chat
+#Logger.chat.addon.whisper=4,Console Chat
+#Logger.chat.addon.party=4,Console Chat
+#Logger.chat.addon.raid=4,Console Chat
+#Logger.chat.addon.bg=4,Console Chat
+#Logger.chat.addon.guild=4,Console Chat
+#Logger.chat.addon.guild.officer=4,Console Chat
+#Logger.chat.addon.channel=4,Console Chat
 #Logger.chat.log=4,Console Server
 #Logger.chat.log.addon=4,Console Server
 #Logger.chat.system=4,Console Server
@@ -766,7 +784,6 @@ Logger.spells.scripts=2,Console Errors
 #Logger.vehicles=4,Console Server
 #Logger.warden=4,Console Server
 #Logger.weather=4,Console Server
-Logger.npcbots=2,NpcBots Server
 
 #
 #    Log.Async.Enable
@@ -1023,7 +1040,7 @@ MinWorldUpdateTime = 1
 #        Default:     10 - (10 minutes)
 #                     1+
 
-UpdateUptimeInterval = 1
+UpdateUptimeInterval = 10
 
 #
 #    MaxCoreStuckTime
@@ -1202,7 +1219,7 @@ Warden.ClientCheckFailAction = 0
 #        Default:     86400 - (24 hours)
 #                     0     - (Permanent ban)
 
-Warden.BanDuration = 259200
+Warden.BanDuration = 86400
 
 #
 ###################################################################################################
@@ -1260,31 +1277,17 @@ Visibility.GroupMode = 1
 #    Visibility.Distance.Instances
 #    Visibility.Distance.BGArenas
 #        Description: Visibility distance to see other players or gameobjects.
-#                     Visibility on continents on retail ~90 yards. In BG/Arenas ~180.
-#                     For instances default ~120.
+#                     Visibility on continents on retail ~100 yards. In BG/Arenas ~250.
+#                     For instances default ~170.
 #                     Max limited by active player zone: ~ 333
 #                     Min limit is max aggro radius (45) * Rate.Creature.Aggro
-#        Default:     90  - (Visibility.Distance.Continents)
-#                     120 - (Visibility.Distance.Instances)
-#                     180 - (Visibility.Distance.BGArenas)
+#        Default:     100  - (Visibility.Distance.Continents)
+#                     170 - (Visibility.Distance.Instances)
+#                     250 - (Visibility.Distance.BGArenas)
 
-Visibility.Distance.Continents = 90
-Visibility.Distance.Instances = 120
-Visibility.Distance.BGArenas = 180
-
-#
-#    Visibility.Notify.Period.OnContinents
-#    Visibility.Notify.Period.InInstances
-#    Visibility.Notify.Period.InBGArenas
-#        Description: Time (in milliseconds) for visibility update period. Lower values may have
-#                     performance impact.
-#        Default:     1000 - (Visibility.Notify.Period.OnContinents)
-#                     1000 - (Visibility.Notify.Period.InInstances)
-#                     1000 - (Visibility.Notify.Period.InBGArenas)
-
-Visibility.Notify.Period.OnContinents = 1000
-Visibility.Notify.Period.InInstances  = 1000
-Visibility.Notify.Period.InBGArenas   = 1000
+Visibility.Distance.Continents = 100
+Visibility.Distance.Instances = 170
+Visibility.Distance.BGArenas = 250
 
 #
 #    Visibility.ObjectSparkles
@@ -1705,15 +1708,6 @@ PlayerStart.MapsExplored = 0
 InstantLogout = 1
 
 #
-#    CastUnstuck
-#        Description: Allow casting the Unstuck spell using .start or unstuck button in client
-#                     help options.
-#        Default:     1 - (Enabled)
-#                     0 - (Disabled)
-
-CastUnstuck = 1
-
-#
 ###################################################################################################
 
 ###################################################################################################
@@ -2086,7 +2080,6 @@ Rate.Talent.Pet = 1
 #    Rate.RunicPower.Loss
 #    Rate.Focus
 #    Rate.Energy
-#    Rate.Loyalty
 #        Description: Multiplier to configure health, mana, incoming rage, loss of rage, focus
 #                     energy and loyalty increase or decrease.
 #        Default:     1 - (Rate.Health)
@@ -2097,7 +2090,6 @@ Rate.Talent.Pet = 1
 #                     1 - (Rate.RunicPower.Loss)
 #                     1 - (Rate.Focus)
 #                     1 - (Rate.Energy)
-#                     1 - (Rate.Loyalty)
 
 Rate.Health            = 1
 Rate.Mana              = 1
@@ -2548,7 +2540,7 @@ Death.SicknessLevel = 11
 #                     0 - (Disabled)
 
 Death.CorpseReclaimDelay.PvP = 1
-Death.CorpseReclaimDelay.PvE = 0
+Death.CorpseReclaimDelay.PvE = 1
 
 #
 #    Death.Bones.World
@@ -2623,6 +2615,14 @@ ItemDelete.Quality = 3
 #
 
 ItemDelete.ItemLevel = 80
+
+#
+#    ItemDelete.KeepDays
+#        Description: Time (in days)
+#        Default:     0  - (Disabled, Don't delete any it)
+#                     30 - (Enabled)
+
+ItemDelete.KeepDays = 0
 
 #
 ###################################################################################################
@@ -3269,6 +3269,15 @@ LFG.KickPreventionTimer = 900
 DungeonAccessRequirements.LFGLevelDBCOverride = 0
 
 #
+#    DungeonFinder.CastDeserter
+#
+#        Description: Cast Deserter to player who leave a dungeon prematurely
+#        Default:     1 - (Enabled, Blizzlike)
+#                     0 - (Disabled)
+
+DungeonFinder.CastDeserter = 1
+
+#
 ###################################################################################################
 
 ###################################################################################################
@@ -3414,7 +3423,7 @@ Wintergrasp.Enable = 1
 #         Description: Maximum number of players allowed in Wintergrasp.
 #         Default:     100
 
-Wintergrasp.PlayerMax = 120
+Wintergrasp.PlayerMax = 100
 
 #
 #     Wintergrasp.PlayerMin
@@ -3565,14 +3574,14 @@ Battleground.Random.ResetHour = 6
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-Battleground.StoreStatistics.Enable = 1
+Battleground.StoreStatistics.Enable = 0
 
 #    Battleground.TrackDeserters.Enable
 #        Description: Track deserters of Battlegrounds.
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-Battleground.TrackDeserters.Enable = 1
+Battleground.TrackDeserters.Enable = 0
 
 #
 #    Battleground.InvitationType
@@ -3665,6 +3674,13 @@ Battleground.BerserkingBuffRespawn = 120
 #        Default:     150 (Recommended 10+)
 
 Battleground.SpeedBuffRespawn = 150
+
+#
+#    Battleground.Override.LowLevels.MinPlayers
+#        Description: Overrides the minimum number of required players per team for all levels < MaxPlayerLevel
+#        Default:     0 (Disabled)
+
+Battleground.Override.LowLevels.MinPlayers = 0
 
 #
 ###################################################################################################
@@ -4063,7 +4079,7 @@ PartyLevelReq = 1
 #        Default:     0 - (Disabled, Blizzlike, Channel settings are lost if last person left)
 #                     1 - (Enabled)
 
-PreserveCustomChannels = 1
+PreserveCustomChannels = 0
 
 #
 #    PreserveCustomChannelDuration
@@ -4339,6 +4355,13 @@ ICC.Buff.Horde    = 73822
 ICC.Buff.Alliance = 73828
 
 #
+#    WipeGunshipBlizzlike.Enable
+#       Description: Wipe the gunship fight if no player is on the deck.
+#       Default:     1 - (Blizzlike)
+
+WipeGunshipBlizzlike.Enable = 1
+
+#
 #     Minigob.Manabonk.Enable
 #        Description: Enable/ Disable Minigob Manabonk
 #        Default:     1
@@ -4383,6 +4406,20 @@ TeleportTimeoutFar = 45
 DailyRBGArenaPoints.MinLevel = 71
 
 #
+#    MunchingBlizzlike.Enabled
+#        Description: Enable the Blizzlike implementation of munching with e.g. Warrior's Rend or Mage's Ignite
+#        Default: 1 - (Blizzlike)
+
+MunchingBlizzlike.Enabled = 1
+
+#
+#    Daze.Enabled
+#        Description: Enable or disable the chance for mob melee attacks to daze the victim.
+#        Default: 1 - (Blizzlike)
+
+Daze.Enabled = 1
+
+#
 ###################################################################################################
 
 ###################################################################################################
@@ -4407,942 +4444,7 @@ Debug.Arena = 0
 ###################################################################################################
 
 ###################################################################################################
-# METRIC SETTINGS
-#
-# These settings control the statistics sent to the metric database (currently InfluxDB)
-#
-#    Metric.Enable
-#        Description: Enables statistics sent to the metric database.
-#        Default:     0 - (Disabled)
-#                     1 - (Enabled)
-#
-
-Metric.Enable = 0
-
-#
-#    Metric.Interval
-#        Description: Interval between every batch of data sent in seconds
-#        Default:     10 seconds
-#
-
-Metric.Interval = 10
-
-#
-#    Metric.ConnectionInfo
-#        Description: Connection settings for metric database (currently InfluxDB).
-#        Example:     "hostname;port;database"
-#        Default:     "127.0.0.1;8086;worldserver"
-#
-
-Metric.ConnectionInfo = "127.0.0.1;8086;worldserver"
-
-#
-#    Metric.OverallStatusInterval
-#        Description: Interval between every gathering of overall worldserver status data in seconds
-#        Default:     1 second
-#
-
-Metric.OverallStatusInterval = 1
-
-#
-#  Metric threshold values: Given a metric "name"
-#    Metric.Threshold.name
-#        Description: Skips sending statistics with a value lower than the config value.
-#                     If the threshold is commented out, the metric will be ignored.
-#                     Only metrics logged with METRIC_DETAILED_TIMER in the sources are affected.
-#                     Disabled by default. Requires WITH_DETAILED_METRICS CMake flag.
-#
-#        Format:      Value as integer
-#
-
-#Metric.Threshold.world_update_sessions_time = 100
-#Metric.Threshold.worldsession_update_opcode_time = 50
-
-#
-###################################################################################################
-
-###################################################################################################
-# NPCBOT CONFIGURATION
-#
-#    NpcBot.Enable
-#        Description: Enables NpcBot system.
-#        Default:     1 - enable
-#                     0 - disable
-
-NpcBot.Enable = 1
-
-#
-#    NpcBot.MaxBots
-#        Description: Maximum number of bots allowed for players per level bracket:
-#                     0-9, 10-19, 20,29, ... , 70-79, 80+.
-#        Default:     1,1,1,1,1,1,1,1,1 - (1 for all levels)
-#                     0,1,2,3,4,5,6,7,8 - (1 per 10 levels)
-#        Max:         39
-
-NpcBot.MaxBots = 39,39,39,39,39,39,39,39,39
-
-#
-#    NpcBot.MaxBotsPerClass
-#        Description: Maximum bots of each class allowed for players.
-#        Default:     0 - no limit
-
-NpcBot.MaxBotsPerClass = 0
-
-#
-#    NpcBot.MaxBotsPerClass
-#        Description: Maximum dark ranger bots allowed to be hired by a given player.
-#        Default:     1 - only one
-
-NpcBot.MaxDarkRangerBots = 1
-
-#
-#    NpcBot.Botgiver.FilterRaces
-#        Description: Make botgiver only offer bots of player faction (normal classes).
-#        Default:     0 - disable
-
-NpcBot.Botgiver.FilterRaces = 0
-
-#
-#    NpcBot.BaseFollowDistance
-#        Description: Default bot follow distance.
-#        Note:        This parameter determines bots' formation size, distance at which bots
-#                     will chase and attack enemies.
-#        Note2:       This parameter is set for each player at login.
-#        Default:     30
-
-NpcBot.BaseFollowDistance = 35
-
-#    NpcBot.XpReduction.Amount
-#    NpcBot.XpReduction.StartingNumber
-#        Description: XP percent penalty for each bot used starting with <StartingNumber>.
-#        Example:     3 bots, reduction is 20, start is 2: ((3-(2-1))*20) = 40%, 60% exp gained.
-#        Note:        Maximum overall xp reduction is 90%.
-#        Default:     0 - (NpcBot.XpReduction.Amount)
-#                     2 - (NpcBot.XpReduction.StartingNumber)
-
-NpcBot.XpReduction.Amount         = 0
-NpcBot.XpReduction.StartingNumber = 2
-
-#
-#    NpcBot.WanderingBots.BG.CapLevel
-#        Description: Enforce BG bot maximum level limit set by Expansion and MaxPlayerLevel
-#                     config paramter values.
-#        Default:     0 - (Disabled)
-#                     1 - (Enable)
-
-NpcBot.WanderingBots.BG.CapLevel = 0
-
-#
-#    NpcBot.HealTargetIconMask
-#    NpcBot.TankTargetIconMask
-#    NpcBot.OffTankTargetIconMask
-#    NpcBot.DPSTargetIconMask
-#    NpcBot.RangedDPSTargetIconMask
-#    NpcBot.NoDPSTargetIconMask
-#        Description: Icon number bitmask which bots use to search for primary attack
-#                     target, (off-)tanking target, target to heal and protect (out of party),
-#                     or target to try to not damage.
-#        Note:        Many creatures cannot accept heal.
-#        Note2:       While icon is active NPCBot ddealers/tanks will ignore any other targets
-#                     and will not break from combat to follow you.
-#        Note3:       If you set multiple targets only one target at a time will be used.
-#        Example:     To check Star, Triangle and Square we need 1 + 8 + 32 = 41.
-#        Default:     0 (Disable)
-#                     1 - Star
-#                     2 - Circle
-#                     4 - Diamond
-#                     8 - Triangle
-#                     16 - Moon
-#                     32 - Square
-#                     64 - Cross
-#                     128 - Skull
-
-NpcBot.HealTargetIconMask = 4
-NpcBot.TankTargetIconMask = 137
-NpcBot.OffTankTargetIconMask = 34
-NpcBot.DPSTargetIconMask = 224
-NpcBot.RangedDPSTargetIconMask = 233
-NpcBot.NoDPSTargetIconMask = 16
-
-#
-#    NpcBot.Mult.Damage.Physical
-#    NpcBot.Mult.Damage.Spell
-#    NpcBot.Mult.Healing
-#    NpcBot.Mult.HP
-#        Description: Multipliers for bots' damage, healing, etc. Allows to balance bots vs players.
-#        Default:     1.0
-#        Minimum:     0.1
-#        Maximum:    10.0
-
-NpcBot.Mult.Damage.Physical = 1.0
-NpcBot.Mult.Damage.Spell    = 1.0
-NpcBot.Mult.Healing         = 1.0
-NpcBot.Mult.HP              = 1.0
-
-#
-#    NpcBot.Mult.Wanderer.Damage
-#    NpcBot.Mult.Wanderer.Healing
-#    NpcBot.Mult.Wanderer.HP
-#    NpcBot.Mult.Wanderer.Speed
-#        Description: Multipliers for wandering bots' damage, healing, hp and speed.
-#                     Only affects wandering bots in open world.
-#        Default:     1.0
-#        Minimum:     0.1
-#        Maximum:    10.0
-
-NpcBot.Mult.Wanderer.Damage  = 1
-NpcBot.Mult.Wanderer.Healing = 1
-NpcBot.Mult.Wanderer.HP      = 1
-NpcBot.Mult.Wanderer.Speed   = 1
-
-#
-#    NpcBot.Mult.Damage.<Class>
-#        Description: Multipliers for bots' damage by class. Allows to balance dps between bot classes.
-#        Default:     1.0
-#        Minimum:     0.1
-#        Maximum:    10.0
-
-NpcBot.Mult.Damage.Warrior           = 0.89
-NpcBot.Mult.Damage.Paladin           = 0.89
-NpcBot.Mult.Damage.Hunter            = 1.0
-NpcBot.Mult.Damage.Rogue             = 1.12
-NpcBot.Mult.Damage.Priest            = 0.8
-NpcBot.Mult.Damage.DeathKnight       = 0.88
-NpcBot.Mult.Damage.Shaman            = 0.9
-NpcBot.Mult.Damage.Mage              = 0.89
-NpcBot.Mult.Damage.Warlock           = 1.0
-NpcBot.Mult.Damage.Druid             = 0.9
-NpcBot.Mult.Damage.Blademaster       = 1.0
-NpcBot.Mult.Damage.ObsidianDestroyer = 1.0
-NpcBot.Mult.Damage.Archmage          = 1.0
-NpcBot.Mult.Damage.Dreadlord         = 1.0
-NpcBot.Mult.Damage.SpellBreaker      = 1.0
-NpcBot.Mult.Damage.DarkRanger        = 0.85
-NpcBot.Mult.Damage.Necromancer       = 1.0
-NpcBot.Mult.Damage.SeaWitch          = 1.0
-
-# NpcBot.TankHPModifier
-#     Adjusts the health modifier for bots classified as tanks.
-#     This multiplier is applied to their base health to calculate their total health.
-#     Example: Setting this to 1.2 will give tank bots 20% more health than their standard calculation.
-#     Default: 1.0 (no additional health)
-
-NpcBot.TankHPModifier = 1.2
-
-#    Multiply general bot health in raids (Min 0.1 Max 255)
-#    Note: Setting these to extremely high values will make some bots not attack
-NpcBot.Mult.HP.Raid = 1.05
-
-#    Multiply bot mana (Min 0.1 Max 10)
-NpcBot.Mult.Mana = 1.15
-
-# Enable or disable mana regen cheat for NPC Bots. Increases mana regen by 2.5 times.
-# Highly reccomended you keep this enabled.
-# Default: 1 - (Enabled)
-NpcBot.ManaRegenCheat = 1
-
-#    Set NPCBots rates for individual progression (Damage, hp, healing). 
-#    Configs are level based, 1-60 for vanilla, 61-70 for TBC. Wotlk is normalized.
-NpcBot.Rate.Classic = 0.75
-NpcBot.Rate.TBC = 0.85
-
-#
-#    NpcBot.Enable.Dungeon
-#    NpcBot.Enable.Raid
-#    NpcBot.Enable.BG
-#    NpcBot.Enable.Arena
-#    NpcBot.Enable.DungeonFinder
-#        Description: Allow bots to enter PvE/PvP areas and Dungeon Finder query.
-#        Default:     1 - (NpcBot.Enable.Dungeon)
-#                     1 - (NpcBot.Enable.Raid)
-#                     1 - (NpcBot.Enable.BG)
-#                     1 - (NpcBot.Enable.Arena)
-#                     1 - (NpcBot.Enable.DungeonFinder)
-
-NpcBot.Enable.Dungeon       = 1
-NpcBot.Enable.Raid          = 1
-NpcBot.Enable.BG            = 1
-NpcBot.Enable.Arena         = 1
-NpcBot.Enable.DungeonFinder = 1
-
-#
-#    NpcBot.Limit.Dungeon
-#    NpcBot.Limit.Raid
-#        Description: Enable/Disable instance players limitation rules for bots.
-#        Default:     1 - (NpcBot.Limit.Dungeon)
-#                     1 - (NpcBot.Limit.Raid)
-
-NpcBot.Limit.Dungeon = 1
-NpcBot.Limit.Raid    = 1
-
-#
-#    NpcBot.Cost
-#        Description: Bot recruitment cost (in copper).
-#        Note:        This value is for level 80 characters, for lower levels cost is reduced.
-#        Default:     1000000 (100 gold)
-
-NpcBot.Cost = 100000
-
-#
-#    NpcBot.Mult.Damage.Levels
-#        Description: Multipliers for bots' damage by level: 0-9, 10-19, 20,29, ... , 70-79, 80+.
-#                     At least 9 values required.
-#        Default:     1.0
-#        Minimum:     0.1
-#        Maximum:    10.0
-
-NpcBot.Mult.Damage.Levels = 0.86,0.86,0.86,0.86,0.86,0.86,0.86,0.91,1.0
-
-#
-#    NpcBot.UpdateDelay.Base
-#        Description: Base delay between bot AI update cycles (in milliseconds).
-#        Note:        This parameter allows you to increase reaction time and slow down bots
-#                     in general. This may be useful if you want to balance bots in PvP.
-#        Note2:       This value is added on top of existing semi-randomized delay.
-#        Default:     0 (No additional delay)
-
-NpcBot.UpdateDelay.Base = 0
-
-#
-#    NpcBot.EngageDelay.DPS
-#    NpcBot.EngageDelay.Heal
-#        Description: Delay for first healing / non-tank damage after target was engaged
-#                     by tank (in milliseconds).
-#        Note:        This does not affect only bosses - all combat except PvP will be affected.
-#        Note2:       This value affects all owned bots and is set for every player at login.
-#        Default:     0 - (No delay)
-#                     1000 - (1 second)
-
-NpcBot.EngageDelay.DPS  = 2500
-NpcBot.EngageDelay.Heal = 0
-
-#
-#    NpcBot.PvP
-#        Description: Allow bots to attack player-controlled units (players, pets, bots, etc.).
-#        Note:        This rule only applies to player-controlled bots.
-#        Default:     1
-
-NpcBot.PvP = 1
-
-#
-#    NpcBot.Movements.InterruptFood
-#        Description: Remove food and drink auras when starting to move.
-#        Note:        Bots don't use food or drink if not standing still.
-#        Default:     0 - (Do not interrupt)
-#                     1 - (Interrupt food and drink)
-
-NpcBot.Movements.InterruptFood = 0
-
-#
-#    NpcBot.EquipmentDisplay.Enable
-#        Description: Enable displaying equipment changes other than weapons on bot models.
-#        Note:        Client limits equipment updates to
-#                     1) relog
-#                     2) taking a taxi flight
-#                     3) teleporting between maps
-#                     4) not seeing this bot for 3 minutes
-#                     5) bot changing displayId (polymorph, shapeshift, etc.)
-#        Note2:       If client registers (5) of a single bot 3+ times
-#                     said client may crash at exiting game (Error #132) unless (4) happens.
-#        Note3:       Changing this setting requires server restart.
-#        Note4:       Bots having no equipment will not appear naked.
-#        Default:     1 - (Enabled)
-#                     0 - (Disabled)
-
-NpcBot.EquipmentDisplay.Enable = 1
-
-#
-#    NpcBot.EquipmentDisplay.ShowCloak
-#    NpcBot.EquipmentDisplay.ShowHelm
-#        Description: Equipment display rules.
-#        Default:     1 - (NpcBot.EquipmentDisplay.ShowCloak)
-#                     1 - (NpcBot.EquipmentDisplay.ShowHelm)
-
-NpcBot.EquipmentDisplay.ShowCloak = 1
-NpcBot.EquipmentDisplay.ShowHelm  = 0
-
-#
-#    NpcBot.Transmog.Enable
-#        Description: Enable transmogrification of bots' equipment.
-#        Default:     0 - (Disabled)
-#                     1 - (Enabled)
-
-NpcBot.Transmog.Enable = 1
-
-#
-#    NpcBot.Transmog.MixArmorClasses
-#    NpcBot.Transmog.MixWeaponClasses
-#    NpcBot.Transmog.MixWeaponInventoryTypes
-#    NpcBot.Transmog.UseEquipmentSlots
-#        Description: Enable different armor/weapon types to be transmogrified from one to another
-#                     (i.e. plate to leather, axe to mace, dagger to polearm).
-#                     'NpcBot.Transmog.UseEquipmentSlots' makes transmog affect equipment slots
-#                     instead of item IDs and forces all other options.
-#        Default:     0 - (NpcBot.Transmog.MixArmorClasses)
-#                     0 - (NpcBot.Transmog.MixWeaponClasses)
-#                     0 - (NpcBot.Transmog.MixWeaponInventoryTypes)
-#                     0 - (NpcBot.Transmog.UseEquipmentSlots)
-
-NpcBot.Transmog.MixArmorClasses = 1
-NpcBot.Transmog.MixWeaponClasses = 0
-NpcBot.Transmog.MixWeaponInventoryTypes = 0
-NpcBot.Transmog.UseEquipmentSlots = 1
-
-#
-#    NpcBot.Gossip.ShowEquipmentListItems
-#        Description: Send whisper message with clickable items list in equipment gossip menu.
-#        Default:     0 - (Disable)
-#                     1 - (Enable)
-
-NpcBot.Gossip.ShowEquipmentListItems = 0
-
-#
-#    NpcBot.Classes.<Class>.Enable
-#        Description: Allow players to hire bots of certain classes.
-#        Note:        Some non-standard class abilities may be unbalanced or game breaking.
-#        Default:     1 - (NpcBot.Classes.Warrior.Enable)
-#                     1 - (NpcBot.Classes.Paladin.Enable)
-#                     1 - (NpcBot.Classes.Hunter.Enable)
-#                     1 - (NpcBot.Classes.Rogue.Enable)
-#                     1 - (NpcBot.Classes.Priest.Enable)
-#                     1 - (NpcBot.Classes.DeathKnight.Enable)
-#                     1 - (NpcBot.Classes.Shaman.Enable)
-#                     1 - (NpcBot.Classes.Mage.Enable)
-#                     1 - (NpcBot.Classes.Warlock.Enable)
-#                     1 - (NpcBot.Classes.Druid.Enable)
-#                     0 - (NpcBot.Classes.Blademaster.Enable)
-#                     1 - (NpcBot.Classes.ObsidianDestroyer.Enable)
-#                     1 - (NpcBot.Classes.Archmage.Enable)
-#                     1 - (NpcBot.Classes.Dreadlord.Enable)
-#                     1 - (NpcBot.Classes.SpellBreaker.Enable)
-#                     1 - (NpcBot.Classes.DarkRanger.Enable)
-#                     1 - (NpcBot.Classes.Necromancer.Enable)
-#                     1 - (NpcBot.Classes.SeaWitch.Enable)
-#                     1 - (NpcBot.Classes.CryptLord.Enable)
-
-NpcBot.Classes.Warrior.Enable           = 1
-NpcBot.Classes.Paladin.Enable           = 1
-NpcBot.Classes.Hunter.Enable            = 1
-NpcBot.Classes.Rogue.Enable             = 1
-NpcBot.Classes.Priest.Enable            = 1
-NpcBot.Classes.DeathKnight.Enable       = 1
-NpcBot.Classes.Shaman.Enable            = 1
-NpcBot.Classes.Mage.Enable              = 1
-NpcBot.Classes.Warlock.Enable           = 1
-NpcBot.Classes.Druid.Enable             = 1
-NpcBot.Classes.Blademaster.Enable       = 0
-NpcBot.Classes.ObsidianDestroyer.Enable = 0
-NpcBot.Classes.Archmage.Enable          = 0
-NpcBot.Classes.Dreadlord.Enable         = 0
-NpcBot.Classes.SpellBreaker.Enable      = 0
-NpcBot.Classes.DarkRanger.Enable        = 1
-NpcBot.Classes.Necromancer.Enable       = 0
-NpcBot.Classes.SeaWitch.Enable          = 0
-NpcBot.Classes.CryptLord.Enable         = 1
-
-
-#
-#    NpcBot.Stats.Limits.Enable
-#        Description: Enable or disable stats limits for bots.
-#        Default:     0 - Disabled
-
-NpcBot.Stats.Limits.Enable = 1
-
-#
-#    NpcBot.Stats.Limits.<Stat>
-#        Description: Set dodge, parry, block and crit chance percentage limit for bots.
-#        Note:        Some bot classes may ignore some of these values.
-#        Note2:       Auras can still increase these stats above limit.
-#        Default:     95.0 (95%)
-
-NpcBot.Stats.Limits.Dodge = 95.0
-NpcBot.Stats.Limits.Parry = 95.0
-NpcBot.Stats.Limits.Block = 95.0
-NpcBot.Stats.Limits.Crit  = 95.0
-
-#
-#    NpcBot.InfoPacketsLimit
-#        Description: This is a workaround for known issue #5.
-#                     If more than 100 bots are spawned in a single spot players trying
-#                     to approach them will be kicked by AntiDOS protection due to
-#                     'flooding' CMSG_GET_MIRRORIMAGE_DATA packets. This setting
-#                     overrides packets limit per tick for that request type.
-#        Note:        If you care about your server stability at all, use this only as a
-#                     temporary solution and spread your bots spawn points properly.
-#        Default:     -1  - (use default limit set by TC devs)
-#                     500 - (500 bots in one spot won't get you kicked)
-
-NpcBot.InfoPacketsLimit = -1
-
-#
-#    NpcBot.OwnershipExpireTime
-#        Description: Maxmum time since last account login (in seconds) before bot ownership
-#                     is automatically cancelled (at server loading).
-#        Note:        All items will be refund and mailed back to player.
-#        Default:     0 - (Disabled)
-#                     604800 - (7 Days)
-
-NpcBot.OwnershipExpireTime = 0
-
-#
-#    NpcBot.OwnershipExpireMode
-#        Description: Ownership expiration mode. Determines when the timer starts.
-#        Default:     0 - (Player goes offline, timer resets if player logs back in)
-#                     1 - (Player hires the bot, timer never resets)
-
-NpcBot.OwnershipExpireMode = 0
-
-#
-#    NpcBot.EnrageOnDismiss
-#        Description: Enable Berserk buff when bot is dismissed and related hostile reaction.
-#        Default:     1 - (Enabled)
-#                     0 - (Disabled)
-
-NpcBot.EnrageOnDismiss = 0
- 
-#
-#    NpcBot.WanderingBots.Continents.Count
-#        Description: Desired number of free wandering bots to generate. Wandering bots roam
-#                     around the map looking for trouble. Names and visuals are cloned from
-#                     existing non-spawned bots. Wandering bots aren't saved in DB.
-#        Note:        Wandering bots keep grids loaded, increasing CPU and memory usage.
-#        Note2:       You must have at least this number of non-spawned bots in creature_template.
-#		 DINKLE NOTE: You can have a maximum of ~5k bots enabled. 1500 Allows for class variation in BGs.
-#        Default:     0 - (Disabled)
-
-NpcBot.WanderingBots.Continents.Count = 1500
-
-#
-#    NpcBot.WanderingBots.BG.Enable
-#        Description: Allow wandering bots generation for Battlegrounds.
-#        Note:        Bots are temporarily borrowed from non-spawned bots pool.
-#        Default:     0 - (Disabled)
-#                     1 - (Enable)
-
-NpcBot.WanderingBots.BG.Enable = 1
-
-#
-#    NpcBot.WanderingBots.BG.TargetTeamPlayersCount.<BGTYPE>
-#        Description: Target BG players count per team to aim for when generating BG bots.
-#        Note:        These values can't go beyond BG minimum / maximum players per team bounds.
-#        Default:     30  - (NpcBot.WanderingBots.BG.TargetTeamPlayersCount.AV) 
-#                     8  - (NpcBot.WanderingBots.BG.TargetTeamPlayersCount.WS)
-#                     12 - (NpcBot.WanderingBots.BG.TargetTeamPlayersCount.AB)
-#                     0  - (NpcBot.WanderingBots.BG.TargetTeamPlayersCount.EY) (NYI, Disabled)
-#                     0  - (NpcBot.WanderingBots.BG.TargetTeamPlayersCount.SA) (NYI, Disabled)
-#                     0  - (NpcBot.WanderingBots.BG.TargetTeamPlayersCount.IC) (NYI, Disabled)
-
-NpcBot.WanderingBots.BG.TargetTeamPlayersCount.AV = 38
-NpcBot.WanderingBots.BG.TargetTeamPlayersCount.WS = 14
-NpcBot.WanderingBots.BG.TargetTeamPlayersCount.AB = 18
-NpcBot.WanderingBots.BG.TargetTeamPlayersCount.EY = 0
-NpcBot.WanderingBots.BG.TargetTeamPlayersCount.SA = 0
-NpcBot.WanderingBots.BG.TargetTeamPlayersCount.IC = 0
-
-#
-#    NpcBot.WanderingBots.Continents.Maps
-#        Description: Continent map IDs where wandering bots are allowed to spawn.
-#        Note:        Wandering bots will never outlevel the map they are in.
-#        Default:     0,1,530,571 - (Eastern Kingdoms, Kalimdor, Outland, Northrend)
-
-NpcBot.WanderingBots.Continents.Maps = 0,1,530,571
-
-#
-#    NpcBot.WanderingBots.Continents.Levels
-#        Description: Percentage of wandering bots to spawn per level bracket:
-#                     0-9, 10-19, 20,29, ... , 70-79, 80+.
-#        Note:        Total percentage must be exactly 100.
-#        Note2:       Classes with minimum level requirement may ignore this parameter.
-#        Default:     25,15,15,10,5,10,20,0,0
-
-NpcBot.WanderingBots.Continents.Levels = 20,15,15,10,10,10,20,0,0
-
-#
-#    NpcBot.MountLevel.60
-#    NpcBot.MountLevel.100
-#        Description: Minimum level for bots to be able to use ground mounts
-#        Default:     20 - (NpcBot.MountLevel.60)
-#                     40 - (NpcBot.MountLevel.100)
-
-NpcBot.MountLevel.60  = 40
-NpcBot.MountLevel.100 = 60
-
-# Damage multiplier for Crypt Lord NPC Bot
-NpcBot.Mult.Damage.CryptLord = 0.87
-
-# Enable Gear Bank for NPC Bot
-NpcBot.GearBank.Enable = 1
-
-# Enable Honor Kills for NPC Bot
-NpcBot.HK.Enable = 1
-
-# Enable Honor Kill Messages for NPC Bot
-NpcBot.HK.Message.Enable = 1
-
-# Enable Honor Kill Achievements for NPC Bot
-NpcBot.HK.Achievements.Enable = 1
-
-# Rate for Honor in Honor Kills for NPC Bot
-NpcBot.HK.Rate.Honor = 0.35
-
-#
-#    NpcBot.DisableInstances
-#        Description: When NpcBot.Enable.Dungeon or/and NpcBot.Enable.Raid options are set to 1
-#                     excludes certain instance map ids, preventing bots from entering those maps
-#        Default:     "" - (None)
-#                     "509,531" - (Disable AQ20 and AQ40)
-
-NpcBot.DisableInstances = ""
-
-NpcBot.WanderingBots.Continents.XPGain = 1.000000
-NpcBot.WanderingBots.BG.CapLevelByFirstPlayer = 1
-
-# Group amount drop rate for items
-Rate.Drop.Item.GroupAmount = 1.000000
-
-# Allow Two Side Interaction in Arena
-AllowTwoSide.Interaction.Arena = 0
-
-# Timeout for Auction House Searches
-AuctionHouse.SearchTimeout = 1000
-
-GridCleanUpDelay = 300000
-
-#    NpcBot.HideSpawns
-#        Description: Prevent inactive bots from entering world
-#        Note:        Botgiver npc will become the only way to hire bots
-#        Note2:       Only GM's presense will reveal bot's spawn location (temporarily)
-#        Default:     0 - (Disabled, keep all spawned bots in world)
-#                     1 - (Enabled)
-
-NpcBot.HideSpawns = 1
-
-#
-#    NpcBot.LogToDB
-#        Description: Log bot events debug info to DB. Records will be kept up to 30 days
-#        Default:     1 - (Enable)
-#                     0 - (Disable)
-
-NpcBot.LogToDB = 0
-
-#
-###################################################################################################
-
-#
-#   Arena.LegacyArenaPoints
-#        Description: Use arena point calculation from TBC for season 1 - 5 when rating is less or equal to 1500
-#        Default:     1 - (Enabled)
-#                     0 - (Disabled)
-
-Arena.LegacyArenaPoints = 0
-
-#
-#    Arena.QueueAnnouncer.Detail
-#        Description: The amount of detail to announce on teams queued for arenas.
-#        Default:     3 - (Announce the team's name and rating)
-#                     2 - (Announce only the team's name)
-#                     1 - (Announce only the team's rating)
-#                     0 - (Do not announce any information about the teams)
-#
-
-Arena.QueueAnnouncer.Detail = 3
-
-
-#    Rate.Talent.Pet
-#        Description: Adjusts how quickly pets gain talent points. 
-#        A setting of 1 is normal rate; higher numbers increase the rate, lower numbers decrease it.
-#        Default: 1.0
-
-Rate.Talent.Pet = 1.0
-
-#    Bonus.Pet.TalentPoints
-#        Description: Defines the number of additional talent points that pets will receive.
-#        The value set here will be added to the total talent points that a pet can have based on its level.
-#        Example: If set to 2, each pet will receive 2 extra talent points total.
-#        Note: This does interact with Rate.Talent.Pet so if that's set to 2 and this is set to 30
-#        and your player's level is 40, it'll be 43 talent points, whereas if above is set to 1 and this to 30,
-#        then at level 40 your talent points will be 35 (5 without any bonuses at all).
-#        Default: 0 (No additional talent points are given by default.)
-#
-
-Bonus.Pet.TalentPoints = 0
-
-#    DailyRBGArenaPoints.MinLevel
-#        Description: Allows gaining arena points on the first RBG win at level 70.
-#        Default: 71 - (Blizzlike)
-
-DailyRBGArenaPoints.MinLevel = 60
- 
- ###################################################################################################
-# CUSTOM STAT SETTINGS
-#
-#    The following settings are for increasing gains from various stats. NPC Bots do NOT gain these multipliers.
-#    Also, the Max values are "more like guidelines." The interger is a float so you can set these extremely high.
-#    However, doing extremely high values may break your game so be warned.
-#
-#    DefenseRatingMultiplier.Level1to60
-#        Description: Multiplier for defense rating for players between levels 1 and 60. Setting the value to 2, for example,
-#        will mean that players get 2 Defense Skill for every 1 point.
-#        This was added to make tanking less challenging in vanilla raids as it was impossible to cap unless you were
-#        in Naxx40 gear.
-#        Default:     1.5  - (50% more from Defense rating. Can be set to 1)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-DefenseRatingMultiplier.Level1to60 = 1.5
-
-#    DefenseRatingMultiplier.Level61to70
-#        Description: Multiplier for defense rating for players between levels 61 and 70. Setting the value to 2, for example,
-#        will mean that players get 2 Defense Skill for every 1 point.
-#        Not really needed but added as an option anyway.
-#        Default:     1.0  - (Normal defense skill from rating)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-DefenseRatingMultiplier.Level61to70 = 1.0
-
-#    DefenseRatingMultiplier.Level71to80
-#        Description: Multiplier for defense rating for players between levels 71 and 80. Setting this value to 2, for example,
-#        will mean that players get 2 Defense Skill for every 1 point.
-#        Not really needed but added as an option anyway.
-#        Default:     1.0  - (Normal defense skill from rating)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-DefenseRatingMultiplier.Level71to80 = 1.0
-
-#    StaminaMultiplier.Level1to60
-#        Description: Multiplier for stamina bonuses from items for players between levels 1 and 60.
-#        Default:     1.0  - (Base stamina value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-StaminaMultiplier.Level1to60 = 1.0
-
-#    StaminaMultiplier.Level61to70
-#        Description: Multiplier for stamina bonuses from items for players between levels 61 and 70.
-#        Default:     1.0  - (Base stamina value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-StaminaMultiplier.Level61to70 = 1.0
-
-#    StaminaMultiplier.Level71to80
-#        Description: Multiplier for stamina bonuses from items for players between levels 71 and 80.
-#        Default:     1.0  - (Base stamina value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-StaminaMultiplier.Level71to80 = 1.0
-
-#    IntellectMultiplier.Level1to60
-#        Description: Multiplier for intellect bonuses from items for players between levels 1 and 60.
-#        Default:     1.0  - (Base intellect value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-IntellectMultiplier.Level1to60 = 1.0
-
-#    IntellectMultiplier.Level61to70
-#        Description: Multiplier for intellect bonuses from items for players between levels 61 and 70.
-#        Default:     1.0  - (Base intellect value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-IntellectMultiplier.Level61to70 = 1.0
-
-#    IntellectMultiplier.Level71to80
-#        Description: Multiplier for intellect bonuses from items for players between levels 71 and 80.
-#        Default:     1.0  - (Base intellect value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-IntellectMultiplier.Level71to80 = 1.0
-
-#    HitRatingMultiplier.Level1to60
-#        Description: Multiplier for hit rating bonuses from items for players between levels 1 and 60.
-#        Default:     1.0  - (Base hit rating value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-HitRatingMultiplier.Level1to60 = 1.0
-
-#    HitRatingMultiplier.Level61to70
-#        Description: Multiplier for hit rating bonuses from items for players between levels 61 and 70.
-#        Default:     1.0  - (Base hit rating value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-HitRatingMultiplier.Level61to70 = 1.0
-
-#    HitRatingMultiplier.Level71to80
-#        Description: Multiplier for hit rating bonuses from items for players between levels 71 and 80.
-#        Default:     1.0  - (Base hit rating value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-HitRatingMultiplier.Level71to80 = 1.0
-
-#    SpiritMultiplier.Level1to60
-#        Description: Multiplier for spirit bonuses from items for players between levels 1 and 60.
-#        Default:     1.0  - (Base spirit value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-SpiritMultiplier.Level1to60 = 1.0
-
-#    SpiritMultiplier.Level61to70
-#        Description: Multiplier for spirit bonuses from items for players between levels 61 and 70.
-#        Default:     1.0  - (Base spirit value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-SpiritMultiplier.Level61to70 = 1.0
-
-#    SpiritMultiplier.Level71to80
-#        Description: Multiplier for spirit bonuses from items for players between levels 71 and 80.
-#        Default:     1.0  - (Base spirit value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-SpiritMultiplier.Level71to80 = 1.0
-
-#    HasteRatingMultiplier.Level1to60
-#        Description: Multiplier for haste rating bonuses from items for players between levels 1 and 60.
-#        Default:     1.0  - (Base haste rating value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-HasteRatingMultiplier.Level1to60 = 1.0
-
-#    HasteRatingMultiplier.Level61to70
-#        Description: Multiplier for haste rating bonuses from items for players between levels 61 and 70.
-#        Default:     1.0  - (Base haste rating value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-HasteRatingMultiplier.Level61to70 = 1.0
-
-#    HasteRatingMultiplier.Level71to80
-#        Description: Multiplier for haste rating bonuses from items for players between levels 71 and 80.
-#        Default:     1.0  - (Base haste rating value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-HasteRatingMultiplier.Level71to80 = 1.0
-
-#    ExpertiseRatingMultiplier.Level1to60
-#        Description: Multiplier for expertise rating bonuses from items for players between levels 1 and 60.
-#        Default:     1.0  - (Base expertise rating value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-ExpertiseRatingMultiplier.Level1to60 = 1.0
-
-#    ExpertiseRatingMultiplier.Level61to70
-#        Description: Multiplier for expertise rating bonuses from items for players between levels 61 and 70.
-#        Default:     1.0  - (Base expertise rating value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-ExpertiseRatingMultiplier.Level61to70 = 1.0
-
-#    Expertise Rating Multiplier.Level71to80
-#        Description: Multiplier for expertise rating bonuses from items for players between levels 71 and 80.
-#        Default:     1.0  - (Base expertise rating value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-ExpertiseRatingMultiplier.Level71to80 = 1.0
-
-#    CritRatingMultiplier.Level1to60
-#        Description: Multiplier for crit rating bonuses from items for players between levels 1 and 60.
-#        Default:     1.0  - (Base crit rating value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-CritRatingMultiplier.Level1to60 = 1.0
-
-#    CritRatingMultiplier.Level61to70
-#        Description: Multiplier for crit rating bonuses from items for players between levels 61 and 70.
-#        Default:     1.0  - (Base crit rating value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-CritRatingMultiplier.Level61to70 = 1.0
-
-#    CritRatingMultiplier.Level71to80
-#        Description: Multiplier for crit rating bonuses from items for players between levels 71 and 80.
-#        Default:     1.0  - (Base crit rating value from items)
-#        Max:         10.0 - (Maximum allowable multiplier)
-
-CritRatingMultiplier.Level71to80 = 1.0
-
-# Mana Bonus Multiplier from Intellect for Players. All Levels. Modifies the amount of mana you get normally. Keep values low.
-# 		Default: 	  1.0
-# 		Max:      	  10
-
-Player.ManaBonusIntellectMultiplier = 1.0
-
-###################################################################################################
-# OTHER CUSTOM SETTINGS
-#
-#    Global Creature Respawn Multiplier
-#        Description: Multiplier for creature respawn times. A higher value means faster respawns.
-#        Value can be a decimal. Does NOT apply to dungeons, raids, and battlegrounds.
-#        Note: There will always be some small delay between corpse despawn and respawn. Respawn time
-#        starts at the end of corpse despawn in Azerothcore. Test on skinned mobs to see effect.
-#        Default:     1.0  - (Normal respawn time)
-#        Max:         I tested a max of 10000 without adverse effects. Raid and Dungeon can probably be set higher.
-
-
-CreatureRespawnTimeMultiplier.Global = 1.5
-
-#    Creature Respawn Multiplier - Dungeons
-#       Description: This multiplier affects the respawn time of creatures specifically in dungeons.
-#       This allows for separate control over dungeon creature respawns compared to the global setting.
-#       Larger values will decrease respawn times (making creatures respawn faster), 
-#       while values less than 1 will increase them. Test on skinned mobs to see effect.
-#       Note: There will always be some small delay between corpse despawn and respawn. Respawn time
-#       starts at the end of corpse despawn in Azerothcore.
-#       Default: 1.0 (no modification to respawn time)
-
-CreatureRespawnTimeMultiplier.Dungeon = 0.75
-
-#    Creature Respawn Multiplier - Raid
-#       Description: This multiplier affects the respawn time of creatures specifically in raids.
-#       This allows for separate control over raid creature respawns compared to the global setting.
-#       Larger values will decrease respawn times (making creatures respawn faster), 
-#       while values less than 1 will increase them. Test on skinned mobs to see effect.
-#       Note: There will always be some small delay between corpse despawn and respawn. Respawn time
-#       starts at the end of corpse despawn in Azerothcore.
-#       Default: 1.0 (no modification to respawn time)
-
-CreatureRespawnTimeMultiplier.Raid = 1.0
-
-# Inconspicuous Chest Gold Amount
-#     Description: Multiplier for base gold from inconspicuous chests.
-#     Default:     1.0  (Normal amount)
-
-InconspicuousChestGoldMultiplier = 1.0
-
-#
-#    Fishing.FastBobber
-#        Description: Enable or disable fast fishing bobber. 
-#        If enabled, the bobber will be ready immediately after casting.
-#        Default:     0 - (0 = disabled, 1 = enabled)
-#
-
-Fishing.FastBobber = 0
-
-#    AlteracValley.InitialPoints
-#        Description: Defines the initial points for Alterac Valley battleground.
-#        Default:     600
-
-AlteracValley.InitialPoints = 2400
-
-# Enable or disable the inclusion of fake players in the /who list
-# Default: 1 (enabled)
-IncludeFakePlayers = 1
-
-###################################################################################################
-# CLUSTER SETTINGS
-#
-# These enables cluster mode. With this mode you can run several worldservers for single realm and
-# split the load between them. Alongside with worldservers you need to run a bunch of other
-# services. More details here: https://github.com/walkline/ToCloud9.
-#
-#    Cluster.Enabled
-#        Description: Enables/disables cluster mode.
-#        Default: 0 - (Disabled)
-#                 1 - (Enabled)
-
-Cluster.Enabled= 1
-
-#
-#    Cluster.AvailableMaps
-#        Description: List of available maps id on this server.
-#        Examples:    "" - (Can handle any map)
-#                     "0,1,573"
-
-Cluster.AvailableMaps=""
-
-#
+#                                                                                                 #
+# GAME SETTINGS END                                                                               #
+#                                                                                                 #
 ###################################################################################################

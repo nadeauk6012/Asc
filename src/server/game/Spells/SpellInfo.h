@@ -195,7 +195,7 @@ enum SpellCustomAttributes
     SPELL_ATTR0_CU_NEEDS_AMMO_DATA               = 0x00080000,
     SPELL_ATTR0_CU_BINARY_SPELL                  = 0x00100000,
     SPELL_ATTR0_CU_NO_POSITIVE_TAKEN_BONUS       = 0x00200000,
-    SPELL_ATTR0_CU_SINGLE_AURA_STACK             = 0x00400000, // pussywizard
+    SPELL_ATTR0_CU_SINGLE_AURA_STACK             = 0x00400000,
     SPELL_ATTR0_CU_SCHOOLMASK_NORMAL_WITH_MAGIC  = 0x00800000,
     SPELL_ATTR0_CU_AURA_CANNOT_BE_SAVED          = 0x01000000,
     SPELL_ATTR0_CU_POSITIVE_EFF0                 = 0x02000000,
@@ -203,7 +203,8 @@ enum SpellCustomAttributes
     SPELL_ATTR0_CU_POSITIVE_EFF2                 = 0x08000000,
     SPELL_ATTR0_CU_FORCE_SEND_CATEGORY_COOLDOWNS = 0x10000000,
     SPELL_ATTR0_CU_FORCE_AURA_SAVING             = 0x20000800,
-    SPELL_ATTR0_CU_ENCOUNTER_REWARD              = 0x40000000, // pussywizard
+    SPELL_ATTR0_CU_ONLY_ONE_AREA_AURA            = 0x20000000,
+    SPELL_ATTR0_CU_ENCOUNTER_REWARD              = 0x40000000,
     SPELL_ATTR0_CU_BYPASS_MECHANIC_IMMUNITY      = 0x80000000,
 
     SPELL_ATTR0_CU_NEGATIVE                      = SPELL_ATTR0_CU_NEGATIVE_EFF0 | SPELL_ATTR0_CU_NEGATIVE_EFF1 | SPELL_ATTR0_CU_NEGATIVE_EFF2,
@@ -276,10 +277,6 @@ public:
         BonusMultiplier(0), MiscValue(0), MiscValueB(0), Mechanic(MECHANIC_NONE), RadiusEntry(nullptr), ChainTarget(0),
         ItemType(0), TriggerSpell(0), ImplicitTargetConditions(nullptr) {}
     SpellEffectInfo(SpellEntry const* spellEntry, SpellInfo const* spellInfo, uint8 effIndex);
-
-    //npcbot
-    void OverrideSpellInfo(SpellInfo const* spellInfo) { ASSERT_NOTNULL(spellInfo); _spellInfo = spellInfo; }
-    //end npcbot
 
     bool IsEffect() const;
     bool IsEffect(SpellEffects effectName) const;
@@ -410,6 +407,7 @@ public:
 
     uint32 GetCategory() const;
     bool HasEffect(SpellEffects effect) const;
+    bool HasEffectMechanic(Mechanics mechanic) const;
     bool HasAura(AuraType aura) const;
     bool HasAnyAura() const;
     bool HasAreaAuraEffect() const;
@@ -528,10 +526,6 @@ public:
 
     std::array<SpellEffectInfo, MAX_SPELL_EFFECTS> const& GetEffects() const { return Effects; }
     SpellEffectInfo const& GetEffect(SpellEffIndex index) const { ASSERT(index < Effects.size()); return Effects[index]; }
-
-    //npcbot
-    SpellInfo const* TryGetSpellInfoOverride(WorldObject const* caster) const;
-    //end npcbot
 
     // loading helpers
     void _InitializeExplicitTargetMask();

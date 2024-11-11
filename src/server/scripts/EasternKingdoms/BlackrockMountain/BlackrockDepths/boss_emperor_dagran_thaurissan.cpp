@@ -29,21 +29,7 @@ enum Yells
 enum Spells
 {
     SPELL_HANDOFTHAURISSAN      = 17492,
-    SPELL_AVATAROFFLAME         = 15636,
-    SPELL_MOLTEN_CLEAVE         = 820354, 
-    SPELL_LAVA_BURST            = 100131 
-};
-
-enum Events
-{
-    //EVENT_SUMMON_EXPLOSIVE_TRAP = 3,
-    EVENT_MOLTEN_CLEAVE = 3, 
-    EVENT_LAVA_BURST = 4 
-};
-
-enum GameObjects
-{
-    GO_EXPLOSIVE_TRAP = 893771 
+    SPELL_AVATAROFFLAME         = 15636
 };
 
 #define DATA_PERCENT_DEAD_SENATORS 0
@@ -79,9 +65,6 @@ public:
             me->CallForHelp(VISIBLE_RANGE);
             events.ScheduleEvent(SPELL_HANDOFTHAURISSAN, 4s, 7s);
             events.ScheduleEvent(SPELL_AVATAROFFLAME, 10s, 12s);
-           // events.ScheduleEvent(EVENT_SUMMON_EXPLOSIVE_TRAP, 6s);
-            events.ScheduleEvent(EVENT_MOLTEN_CLEAVE, 8s); 
-            events.ScheduleEvent(EVENT_LAVA_BURST, 8s, 12s);
         }
 
         void KilledUnit(Unit* /*victim*/) override
@@ -115,18 +98,6 @@ public:
                 Moira->AI()->Talk(0);
                 Moira->SetFaction(FACTION_FRIENDLY);
             }
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            if (players.begin() != players.end())
-            {
-                uint32 baseRewardLevel = 1;
-                bool isDungeon = me->GetMap()->IsDungeon();
-
-                Player* player = players.begin()->GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
-                }
-            }
         }
 
         void UpdateAI(uint32 diff) override
@@ -152,26 +123,6 @@ public:
                 case SPELL_AVATAROFFLAME:
                     DoCastSelf(SPELL_AVATAROFFLAME);
                     events.ScheduleEvent(SPELL_AVATAROFFLAME, 23s, 27s);
-                    break;
-                //case EVENT_SUMMON_EXPLOSIVE_TRAP:
-                //    for (int i = 0; i < 4; ++i) 
-                //    {
-                //        float x, y, z;
-                //        me->GetClosePoint(x, y, z, me->GetObjectSize(), frand(0, 30));
-                //        me->SummonGameObject(GO_EXPLOSIVE_TRAP, x, y, z, 0, 0, 0, 0, 0, 60000);
-                //    }
-                //    events.ScheduleEvent(EVENT_SUMMON_EXPLOSIVE_TRAP, 6s); 
-                //   break;
-                case EVENT_MOLTEN_CLEAVE: 
-                    DoCastVictim(SPELL_MOLTEN_CLEAVE, true);
-                    events.ScheduleEvent(EVENT_MOLTEN_CLEAVE, 10s, 15s);
-                    break;
-
-                case EVENT_LAVA_BURST: 
-                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, false)) {
-                        DoCast(target, SPELL_LAVA_BURST);
-                    }
-                    events.ScheduleEvent(EVENT_LAVA_BURST, 8s, 12s);
                     break;
                 default:
                     break;

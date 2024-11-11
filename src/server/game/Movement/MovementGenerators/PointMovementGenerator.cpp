@@ -18,7 +18,6 @@
 #include "PointMovementGenerator.h"
 #include "Creature.h"
 #include "CreatureAI.h"
-#include "Errors.h"
 #include "MoveSpline.h"
 #include "MoveSplineInit.h"
 #include "ObjectAccessor.h"
@@ -80,14 +79,7 @@ void PointMovementGenerator<T>::DoInitialize(T* unit)
             i_y += 0.2f * std::sin(unit->GetOrientation());
         }
 
-        //npcbot: fix a bug - spline always generates path, !!_generatePath is False!!
-        /*
-        //end npcbot
         init.MoveTo(i_x, i_y, i_z, true);
-        //npcbot
-        */
-        init.MoveTo(i_x, i_y, i_z, false);
-        //end npcbot
     }
     if (speed > 0.0f)
         init.SetVelocity(speed);
@@ -238,10 +230,10 @@ bool EffectMovementGenerator::Update(Unit* unit, uint32)
 
 void EffectMovementGenerator::Finalize(Unit* unit)
 {
-    if (unit->GetTypeId() != TYPEID_UNIT)
+    if (!unit->IsCreature())
         return;
 
-    if (unit->GetTypeId() == TYPEID_UNIT && unit->HasUnitMovementFlag(MOVEMENTFLAG_FALLING) && unit->movespline->isFalling()) // pussywizard
+    if (unit->IsCreature() && unit->HasUnitMovementFlag(MOVEMENTFLAG_FALLING) && unit->movespline->isFalling()) // pussywizard
         unit->RemoveUnitMovementFlag(MOVEMENTFLAG_FALLING);
 
     // Need restore previous movement since we have no proper states system

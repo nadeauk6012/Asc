@@ -77,7 +77,7 @@ public:
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim && victim->GetTypeId() == TYPEID_PLAYER)
+            if (victim && victim->IsPlayer())
             {
                 Talk(SAY_KILL);
                 victim->CastSpell(victim, SPELL_MARK_OF_FROST, true);
@@ -97,7 +97,7 @@ public:
                 })
                 .Schedule(5s, 17s, [this](TaskContext context)
                 {
-                    CastSpellOnRandomTarget(SPELL_MANA_STORM, 100.0f);
+                    DoCastRandomTarget(SPELL_MANA_STORM);
                     context.Repeat(7s, 13s);
                 })
                 .Schedule(10s, 30s, [this](TaskContext context)
@@ -153,24 +153,6 @@ public:
             {
                 DoMeleeAttackIfReady();
             });
-        }
-
-        void CastSpellOnRandomTarget(uint32 spellId, float range)
-        {
-            std::list<Unit*> targets;
-            Acore::AnyUnitInObjectRangeCheck check(me, range);
-            Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
-            Cell::VisitAllObjects(me, searcher, range);
-
-            targets.remove_if([this](Unit* unit) -> bool {
-                return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
-                });
-
-            if (!targets.empty())
-            {
-                Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
-                DoCast(target, spellId);
-            }
         }
     };
 
@@ -247,4 +229,3 @@ void AddSC_boss_azuregos()
     RegisterSpellScript(spell_arcane_vacuum);
     RegisterSpellScript(spell_mark_of_frost_freeze);
 }
-

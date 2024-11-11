@@ -237,7 +237,7 @@ void Player::UpdateResistances(uint32 school)
         AuraEffectList const& mResbyIntellect = GetAuraEffectsByType(SPELL_AURA_MOD_RESISTANCE_OF_STAT_PERCENT);
         for(AuraEffectList::const_iterator i = mResbyIntellect.begin(); i != mResbyIntellect.end(); ++i)
         {
-            if((*i)->GetMiscValue() & (1 << (school - 1)) )
+            if ((*i)->GetMiscValue() & (1 << (school - 1)))
                 value += int32(GetStat(Stats((*i)->GetMiscValueB())) * (*i)->GetAmount() / 100.0f);
         }
 
@@ -286,11 +286,11 @@ float Player::GetHealthBonusFromStamina()
 float Player::GetManaBonusFromIntellect()
 {
     float intellect = GetStat(STAT_INTELLECT);
+
     float baseInt = intellect < 20 ? intellect : 20;
     float moreInt = intellect - baseInt;
 
-    // Dinkle: Use the cached multiplier
-    return (baseInt + (moreInt * 15.0f)) * Player::manaBonusIntellectMultiplier;
+    return baseInt + (moreInt * 15.0f);
 }
 
 void Player::UpdateMaxHealth()
@@ -512,7 +512,7 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
     else
     {
         UpdateDamagePhysical(BASE_ATTACK);
-        if (CanDualWield() && haveOffhandWeapon())           //allow update offhand damage only if player knows DualWield Spec and has equipped offhand weapon
+        if (CanDualWield() && HasOffhandWeaponForAttack()) //allow update offhand damage only if player knows DualWield Spec and has equipped offhand weapon
             UpdateDamagePhysical(OFF_ATTACK);
         if (IsClass(CLASS_SHAMAN, CLASS_CONTEXT_STATS) || IsClass(CLASS_PALADIN, CLASS_CONTEXT_STATS))                      // mental quickness
             UpdateSpellDamageAndHealingBonus();
@@ -567,7 +567,7 @@ void Player::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bo
     float weaponMinDamage = GetWeaponDamageRange(attType, MINDAMAGE);
     float weaponMaxDamage = GetWeaponDamageRange(attType, MAXDAMAGE);
 
-    if (IsInFeralForm()) // check if player is druid and in cat or bear forms
+    if (IsAttackSpeedOverridenShapeShift()) // forms with no override on attack speed use normal weapon damage
     {
         uint8 lvl = GetLevel();
         if (lvl > 60)
@@ -923,7 +923,7 @@ void Player::ApplyHealthRegenBonus(int32 amount, bool apply)
 
 void Player::UpdateManaRegen()
 {
-    if( HasAuraTypeWithMiscvalue(SPELL_AURA_PREVENT_REGENERATE_POWER, POWER_MANA + 1) )
+    if (HasAuraTypeWithMiscvalue(SPELL_AURA_PREVENT_REGENERATE_POWER, POWER_MANA + 1))
     {
         SetStatFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER, 0);
         SetStatFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER, 0);
@@ -1053,12 +1053,6 @@ void Creature::UpdateMaxPower(Powers power)
     UnitMods unitMod = UnitMods(static_cast<uint16>(UNIT_MOD_POWER_START) + power);
 
     float value  = GetTotalAuraModValue(unitMod);
-
-    //npcbot
-    if (IsNPCBotOrPet())
-        value += GetCreatePowers(power);
-    //end npcbot
-
     SetMaxPower(power, uint32(value));
 }
 
@@ -1124,7 +1118,7 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
             break;
     }
 
-    if (attType == OFF_ATTACK && !haveOffhandWeapon())
+    if (attType == OFF_ATTACK && !HasOffhandWeaponForAttack())
     {
         minDamage = 0.0f;
         maxDamage = 0.0f;
@@ -1134,66 +1128,17 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
     float weaponMinDamage = GetWeaponDamageRange(attType, MINDAMAGE);
     float weaponMaxDamage = GetWeaponDamageRange(attType, MAXDAMAGE);
 
-    //npcbot: support for feral form
-    if (IsNPCBot() && IsInFeralForm())
+    // Disarm for creatures
+    if (HasWeapon(attType) && !HasWeaponForAttack(attType))
     {
-        float att_speed = GetAPMultiplier(attType, false);
-        uint8 lvl = GetLevel();
-        if (lvl > 60)
-            lvl = 60;
-
-        weaponMinDamage = lvl*0.85f*att_speed;
-        weaponMaxDamage = lvl*1.25f*att_speed;
-    }
-    else
-    //end npcbot
-    if (!CanUseAttackType(attType)) // disarm case
-    {
-        //npcbot: mimic player-like disarm (retain damage)
-        if (IsNPCBot())
-        {
-            // Main hand melee is always usable, but disarm reduces damage drastically
-            if (attType == BASE_ATTACK)
-            {
-                weaponMinDamage *= 0.25f;
-                weaponMaxDamage *= 0.25f;
-            }
-            else
-            {
-                weaponMinDamage = 0.0f;
-                weaponMaxDamage = 0.0f;
-            }
-        }
-        else
-        {
-        //end npcbot
-        weaponMinDamage = 0.0f;
-        weaponMaxDamage = 0.0f;
-        //npcbot
-        }
-    }
-    //end npcbot
-    //npcbot: support for ammo
-    else if (attType == RANGED_ATTACK)
-    {
-        float att_speed = GetAPMultiplier(attType, false);
-        weaponMinDamage += GetCreatureAmmoDPS() * att_speed;
-        weaponMaxDamage += GetCreatureAmmoDPS() * att_speed;
-    //end npcbot
+        minDamage *= 0.5f;
+        maxDamage *= 0.5f;
     }
 
     float attackPower      = GetTotalAttackPowerValue(attType);
     float attackSpeedMulti = GetAPMultiplier(attType, normalized);
-    //npcbot
-    /*
-    //end npcbot
     float baseValue        = GetModifierValue(unitMod, BASE_VALUE) + (attackPower / 14.0f) * variance;
     float basePct          = GetModifierValue(unitMod, BASE_PCT) * attackSpeedMulti;
-    //npcbot
-    */
-    float baseValue        = GetModifierValue(unitMod, BASE_VALUE) + (attackPower / 14.0f) * variance * attackSpeedMulti;
-    float basePct          = GetModifierValue(unitMod, BASE_PCT);
-    //end npcbot
     float totalValue       = GetModifierValue(unitMod, TOTAL_VALUE);
     float totalPct         = addTotalPct ? GetModifierValue(unitMod, TOTAL_PCT) : 1.0f;
     float dmgMultiplier    = GetCreatureTemplate()->DamageModifier; // = DamageModifier * _GetDamageMod(rank);

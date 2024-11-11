@@ -16,7 +16,7 @@
  */
 
 #include "Cell.h"
-#include "CellImpl.h"
+#include "CellImpl.h" // NOTE: this import is NEEDED (even though some IDEs report it as unused)
 #include "CreatureScript.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
@@ -75,7 +75,7 @@ struct npc_ouro_spawner : public ScriptedAI
     void MoveInLineOfSight(Unit* who) override
     {
         // Spawn Ouro on LoS check
-        if (!hasSummoned && who->GetTypeId() == TYPEID_PLAYER && me->IsWithinDistInMap(who, 40.0f) && !who->ToPlayer()->IsGameMaster())
+        if (!hasSummoned && who->IsPlayer() && me->IsWithinDistInMap(who, 40.0f) && !who->ToPlayer()->IsGameMaster())
         {
             if (InstanceScript* instance = me->GetInstanceScript())
             {
@@ -129,7 +129,7 @@ struct boss_ouro : public BossAI
 
                     context.Repeat();
                 })
-                .Schedule(25s, [this](TaskContext context)
+                .Schedule(20s, [this](TaskContext context)
                     {
                         DoCastSelf(SPELL_SUMMON_OURO_MOUNDS, true);
                         context.Repeat();
@@ -223,7 +223,7 @@ struct boss_ouro : public BossAI
 
                     context.Repeat();
                 })
-            .Schedule(21s, GROUP_EMERGED, [this](TaskContext context)
+            .Schedule(22s, GROUP_EMERGED, [this](TaskContext context)
                 {
                     DoCastVictim(SPELL_SWEEP);
                     context.Repeat();
@@ -294,22 +294,6 @@ struct boss_ouro : public BossAI
             std::bind(&ScriptedAI::DoMeleeAttackIfReady, this));
     }
 
-    void JustDied(Unit* killer) override
-    {
-        summons.DespawnAll();
-
-        DoCastSelf(875167, true);
-        Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        for (auto const& playerPair : players)
-        {
-            Player* player = playerPair.GetSource();
-            if (player)
-            {
-                DistributeChallengeRewards(player, me, 1, false);
-            }
-        }
-    }
-
 protected:
     bool _enraged;
     uint8 _submergeMelee;
@@ -348,15 +332,15 @@ struct npc_dirt_mound : ScriptedAI
     {
         DoZoneInCombat();
         scheduler.Schedule(30s, [this](TaskContext /*context*/)
-            {
-                DoCastSelf(SPELL_SUMMON_SCARABS, true);
-                me->DespawnOrUnsummon(1000);
-            })
+        {
+            DoCastSelf(SPELL_SUMMON_SCARABS, true);
+            me->DespawnOrUnsummon(1000);
+        })
             .Schedule(100ms, [this](TaskContext context)
-                {
-                    ChaseNewTarget();
-                    context.Repeat(5s, 10s);
-                });
+        {
+            ChaseNewTarget();
+            context.Repeat(5s, 10s);
+        });
     }
 
     void ChaseNewTarget()
@@ -379,16 +363,9 @@ struct npc_dirt_mound : ScriptedAI
 
     void Reset() override
     {
-        DoCastSelf(88011, true);
-        DoCastSelf(822009, true);
-
-        // Schedule the casting of SPELL_QUAKE after 4 seconds
-        scheduler.Schedule(4s, [this](TaskContext /*context*/)
-            {
-                DoCastSelf(SPELL_QUAKE, true);
-                DoCastSelf(SPELL_DIRTMOUND_PASSIVE, true);
-                DoCastSelf(SPELL_DREAM_FOG, true);
-            });
+        DoCastSelf(SPELL_DIRTMOUND_PASSIVE, true);
+        DoCastSelf(SPELL_DREAM_FOG, true);
+        DoCastSelf(SPELL_QUAKE, true);
     }
 
     void EnterEvadeMode(EvadeReason /*why*/) override

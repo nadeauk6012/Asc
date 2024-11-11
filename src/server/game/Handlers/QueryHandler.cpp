@@ -28,47 +28,8 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
-//npcbot
-#include "CreatureData.h"
-#include "botdatamgr.h"
-#include "botmgr.h"
-//end npcbot
-
 void WorldSession::SendNameQueryOpcode(ObjectGuid guid)
 {
-    //npcbot: try query bot info
-    if (guid.IsCreature())
-    {
-        uint32 creatureId = guid.GetEntry();
-        CreatureTemplate const* creatureTemplate = sObjectMgr->GetCreatureTemplate(creatureId);
-        if (creatureTemplate && creatureTemplate->IsNPCBot())
-        {
-            std::string creatureName = creatureTemplate->Name;
-            if (CreatureLocale const* creatureInfo = sObjectMgr->GetCreatureLocale(creatureId))
-            {
-                uint32 loc = GetSessionDbLocaleIndex();
-                if (creatureInfo->Name.size() > loc && !creatureInfo->Name[loc].empty() && Utf8FitTo(creatureInfo->Name[loc], {}))
-                    creatureName = creatureInfo->Name[loc];
-            }
-
-            NpcBotExtras const* extData = ASSERT_NOTNULL(BotDataMgr::SelectNpcBotExtras(creatureId));
-            NpcBotAppearanceData const* appData = BotDataMgr::SelectNpcBotAppearance(creatureId);
-
-            WorldPacket bpdata(SMSG_NAME_QUERY_RESPONSE, (8+1+1+1+1+1+10));
-            bpdata << guid.WriteAsPacked();
-            bpdata << uint8(0);
-            bpdata << creatureName;
-            bpdata << uint8(0);
-            bpdata << uint8(BotMgr::GetBotPlayerRace(extData->bclass, extData->race));
-            bpdata << uint8(appData ? appData->gender : uint8(GENDER_MALE));
-            bpdata << uint8(BotMgr::GetBotPlayerClass(extData->bclass));
-            bpdata << uint8(0);
-            SendPacket(&bpdata);
-            return;
-        }
-    }
-    //end npcbot
-
     CharacterCacheEntry const* playerData = sCharacterCache->GetCharacterCacheByGuid(guid);
 
     WorldPacket data(SMSG_NAME_QUERY_RESPONSE, (8 + 1 + 1 + 1 + 1 + 1 + 10));
@@ -145,13 +106,7 @@ void WorldSession::HandleCreatureQueryOpcode(WorldPacket& recvData)
         Title = ci->SubName;
 
         LocaleConstant loc_idx = GetSessionDbLocaleIndex();
-        //npcbot: pointless check, see AccountInfo()
-        /*
-        //end npcbot
         if (loc_idx >= 0)
-        //npcbot
-        */
-        //end npcbot
         {
             if (CreatureLocale const* cl = sObjectMgr->GetCreatureLocale(entry))
             {
@@ -161,34 +116,46 @@ void WorldSession::HandleCreatureQueryOpcode(WorldPacket& recvData)
         }
         // guess size
         WorldPacket data(SMSG_CREATURE_QUERY_RESPONSE, 100);
-        data << uint32(entry);                              // creature entry
+        data << uint32(entry);                                       // creature entry
         data << Name;
-        data << uint8(0) << uint8(0) << uint8(0);           // name2, name3, name4, always empty
+        data << uint8(0) << uint8(0) << uint8(0);                    // name2, name3, name4, always empty
         data << Title;
-        data << ci->IconName;                               // "Directions" for guard, string for Icons 2.3.0
-        data << uint32(ci->type_flags);                     // flags
-        data << uint32(ci->type);                           // CreatureType.dbc
-        data << uint32(ci->family);                         // CreatureFamily.dbc
-        data << uint32(ci->rank);                           // Creature Rank (elite, boss, etc)
-        data << uint32(ci->KillCredit[0]);                  // new in 3.1, kill credit
-        data << uint32(ci->KillCredit[1]);                  // new in 3.1, kill credit
-        data << uint32(ci->Modelid1);                       // Modelid1
-        data << uint32(ci->Modelid2);                       // Modelid2
-        data << uint32(ci->Modelid3);                       // Modelid3
-        data << uint32(ci->Modelid4);                       // Modelid4
-        data << float(ci->ModHealth);                       // dmg/hp modifier
-        data << float(ci->ModMana);                         // dmg/mana modifier
+        data << ci->IconName;                                        // "Directions" for guard, string for Icons 2.3.0
+        data << uint32(ci->type_flags);                              // flags
+        data << uint32(ci->type);                                    // CreatureType.dbc
+        data << uint32(ci->family);                                  // CreatureFamily.dbc
+        data << uint32(ci->rank);                                    // Creature Rank (elite, boss, etc)
+        data << uint32(ci->KillCredit[0]);                           // new in 3.1, kill credit
+        data << uint32(ci->KillCredit[1]);                           // new in 3.1, kill credit
+        if (ci->GetModelByIdx(0))
+            data << uint32(ci->GetModelByIdx(0)->CreatureDisplayID); // Modelid1
+        else
+            data << uint32(0);                                       // Modelid1
+        if (ci->GetModelByIdx(1))
+            data << uint32(ci->GetModelByIdx(1)->CreatureDisplayID); // Modelid2
+        else
+            data << uint32(0);                                       // Modelid2
+        if (ci->GetModelByIdx(2))
+            data << uint32(ci->GetModelByIdx(2)->CreatureDisplayID); // Modelid3
+        else
+            data << uint32(0);                                       // Modelid3
+        if (ci->GetModelByIdx(3))
+            data << uint32(ci->GetModelByIdx(3)->CreatureDisplayID); // Modelid4
+        else
+            data << uint32(0);                                       // Modelid4
+        data << float(ci->ModHealth);                                // dmg/hp modifier
+        data << float(ci->ModMana);                                  // dmg/mana modifier
         data << uint8(ci->RacialLeader);
 
         CreatureQuestItemList const* items = sObjectMgr->GetCreatureQuestItemList(entry);
         if (items)
-            for (size_t i = 0; i < MAX_CREATURE_QUEST_ITEMS; ++i)
+            for (std::size_t i = 0; i < MAX_CREATURE_QUEST_ITEMS; ++i)
                 data << (i < items->size() ? uint32((*items)[i]) : uint32(0));
         else
-            for (size_t i = 0; i < MAX_CREATURE_QUEST_ITEMS; ++i)
+            for (std::size_t i = 0; i < MAX_CREATURE_QUEST_ITEMS; ++i)
                 data << uint32(0);
 
-        data << uint32(ci->movementId);                     // CreatureMovementInfo.dbc
+        data << uint32(ci->movementId);                              // CreatureMovementInfo.dbc
         SendPacket(&data);
     }
     else
@@ -243,10 +210,10 @@ void WorldSession::HandleGameObjectQueryOpcode(WorldPacket& recvData)
 
         GameObjectQuestItemList const* items = sObjectMgr->GetGameObjectQuestItemList(entry);
         if (items)
-            for (size_t i = 0; i < MAX_GAMEOBJECT_QUEST_ITEMS; ++i)
+            for (std::size_t i = 0; i < MAX_GAMEOBJECT_QUEST_ITEMS; ++i)
                 data << (i < items->size() ? uint32((*items)[i]) : uint32(0));
         else
-            for (size_t i = 0; i < MAX_GAMEOBJECT_QUEST_ITEMS; ++i)
+            for (std::size_t i = 0; i < MAX_GAMEOBJECT_QUEST_ITEMS; ++i)
                 data << uint32(0);
 
         SendPacket(&data);

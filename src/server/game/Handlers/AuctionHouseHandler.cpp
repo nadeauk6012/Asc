@@ -25,7 +25,6 @@
 #include "Opcodes.h"
 #include "Player.h"
 #include "ScriptMgr.h"
-#include "UpdateMask.h"
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
@@ -55,7 +54,7 @@ void WorldSession::SendAuctionHello(ObjectGuid guid, Creature* unit)
 {
     if (GetPlayer()->GetLevel() < sWorld->getIntConfig(CONFIG_AUCTION_LEVEL_REQ))
     {
-        SendNotification(GetAcoreString(LANG_AUCTION_REQ), sWorld->getIntConfig(CONFIG_AUCTION_LEVEL_REQ));
+        ChatHandler(this).SendNotification(LANG_AUCTION_REQ, sWorld->getIntConfig(CONFIG_AUCTION_LEVEL_REQ));
         return;
     }
 
@@ -159,7 +158,6 @@ void WorldSession::HandleAuctionSellItem(WorldPacket& recvData)
         return;
     }
 
-    // Dinkle: Get the auctioneer creature and check conditions
     Creature* creature = GetPlayer()->GetNPCIfCanInteractWith(auctioneer, UNIT_NPC_FLAG_AUCTIONEER);
     if (!creature)
     {
@@ -167,14 +165,6 @@ void WorldSession::HandleAuctionSellItem(WorldPacket& recvData)
         return;
     }
 
-    // Check to prevent Murky (creature ID 15186) from listing items
-    if (creature->GetEntry() == 15186) // Murky's Creature ID
-    {
-        // Murky is not allowed to list items, send a message to the player
-        ChatHandler(GetPlayer()->GetSession()).PSendSysMessage("You cannot list items with Murky, but you are welcome to make purchases.");
-        return; // Exit the function early
-    }
-    
     AuctionHouseEntry const* auctionHouseEntry = AuctionHouseMgr::GetAuctionHouseEntry(creature->GetFaction());
     if (!auctionHouseEntry)
     {
@@ -216,7 +206,7 @@ void WorldSession::HandleAuctionSellItem(WorldPacket& recvData)
             itemEntry = item->GetTemplate()->ItemId;
 
         if (sAuctionMgr->GetAItem(item->GetGUID()) || !item->CanBeTraded() || item->IsNotEmptyBag() ||
-                item->GetTemplate()->Flags & ITEM_FLAG_CONJURED || item->GetUInt32Value(ITEM_FIELD_DURATION) ||
+                item->GetTemplate()->HasFlag(ITEM_FLAG_CONJURED) || item->GetUInt32Value(ITEM_FIELD_DURATION) ||
                 item->GetCount() < count[i] || itemEntry != item->GetTemplate()->ItemId)
         {
             SendAuctionCommandResult(0, AUCTION_SELL_ITEM, ERR_AUCTION_DATABASE_ERROR);

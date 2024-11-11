@@ -189,20 +189,6 @@ public:
                 exitDoor->SetGoState(GO_STATE_ACTIVE);
 
             instance->SetBossState(DATA_WARCHIEF_REND_BLACKHAND, DONE);
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            if (!players.IsEmpty())
-            {
-                uint32 baseRewardLevel = 1;
-                bool isDungeon = me->GetMap()->IsDungeon();
-
-                for (auto const& playerPair : players)
-                {
-                    if (Player* player = playerPair.GetSource())
-                    {
-                        DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
-                    }
-                }
-            }
         }
 
         void SummonedCreatureDespawn(Creature* creature) override

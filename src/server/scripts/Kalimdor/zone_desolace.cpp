@@ -54,7 +54,7 @@ enum Caravan
 
     MAX_CARAVAN_SUMMONS                 = 3,
 
-    TIME_SHOP_STOP                      = 5 * MINUTE * IN_MILLISECONDS,
+    TIME_SHOP_STOP                      = 10 * MINUTE * IN_MILLISECONDS,
     TIME_HIRE_STOP                      = 4 * MINUTE * IN_MILLISECONDS,
 
     // Ambush
@@ -133,7 +133,7 @@ public:
         {
             if (_playerGUID)
                 if (Player* player = ObjectAccessor::GetPlayer(*me, _playerGUID))
-                    if (me->IsWithinDist(player, 80.0f))
+                    if (me->IsWithinDist(player, 60.0f))
                         return;
 
             _playerGUID.Clear();
@@ -208,16 +208,6 @@ public:
                 summons[2] = cr->GetGUID();
             }
 
-            SummonsFollow();
-        }
-
-        void RestartEscort()
-        {
-            CheckCaravan(); // Ensure caravan is intact.
-            SetDespawnAtEnd(false);
-            Start(true, true, ObjectGuid::Empty, 0, false, false, true);
-
-            // Explicitly command to follow right after restarting.
             SummonsFollow();
         }
 
@@ -315,26 +305,24 @@ public:
                     }
                     events.ScheduleEvent(EVENT_WAIT_FOR_ASSIST, TIME_HIRE_STOP);
                     break;
-                // Dinkle: Simplified North -> South - complete
+                // North -> South - complete
                 case 103:
                     if (Player* player = ObjectAccessor::GetPlayer(*me, _playerGUID))
                     {
-                        // Check for the presence of summons as a completion criterion.
-                        if (summons[0] && summons[1] && summons[2])
-                            player->CompleteQuest(QUEST_BODYGUARD_FOR_HIRE);
+                        if (CheckCaravan())
+                            player->GroupEventHappens(QUEST_BODYGUARD_FOR_HIRE, player);
                         else
                             player->FailQuest(QUEST_BODYGUARD_FOR_HIRE);
                     }
                     _playerGUID.Clear();
                     CheckPlayer();
                     break;
-                // Dinkle: Simplified South -> North - complete
+                // South -> North - complete
                 case 235:
                     if (Player* player = ObjectAccessor::GetPlayer(*me, _playerGUID))
                     {
-                        // Check for the presence of summons as a completion criterion.
-                        if (summons[0] && summons[1] && summons[2])
-                            player->CompleteQuest(QUEST_GIZELTON_CARAVAN);
+                        if (CheckCaravan())
+                            player->GroupEventHappens(QUEST_GIZELTON_CARAVAN, player);
                         else
                             player->FailQuest(QUEST_GIZELTON_CARAVAN);
                     }
@@ -418,7 +406,9 @@ public:
                         active->RemoveNpcFlag(UNIT_NPC_FLAG_QUESTGIVER);
                     break;
                 case EVENT_RESTART_ESCORT:
-                    RestartEscort();
+                    CheckCaravan();
+                    SetDespawnAtEnd(false);
+                    Start(true, true, ObjectGuid::Empty, 0, false, false, true);
                     break;
             }
 

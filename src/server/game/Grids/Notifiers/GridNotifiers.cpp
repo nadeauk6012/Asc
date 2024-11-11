@@ -18,7 +18,6 @@
 #include "GridNotifiers.h"
 #include "Map.h"
 #include "ObjectAccessor.h"
-#include "SpellMgr.h"
 #include "Transport.h"
 #include "UpdateData.h"
 #include "WorldPacket.h"
@@ -76,11 +75,6 @@ void VisibleNotifier::SendToSelf()
         {
             if (i_largeOnly != obj->IsVisibilityOverridden())
                 continue;
-
-            //npcbot:
-            if (obj->IsNPCBotOrPet() && i_player.GetDistance2d(obj) < i_player.GetVisibilityRange() && i_player.CanSeeOrDetect(obj, false, true))
-                continue;
-            //end npcbot
         }
 
         // pussywizard: static transports are removed only in RemovePlayerFromMap and here if can no longer detect (eg. phase changed)
@@ -164,7 +158,7 @@ inline void CreatureUnitRelocationWorker(Creature* c, Unit* u)
         {
             c->AI()->MoveInLineOfSight_Safe(u);
         }
-        else if (u->GetTypeId() == TYPEID_PLAYER && u->HasStealthAura() && c->IsAIEnabled && c->CanSeeOrDetect(u, false, true, true))
+        else if (u->IsPlayer() && u->HasStealthAura() && c->IsAIEnabled && c->CanSeeOrDetect(u, false, true, true))
         {
             c->AI()->TriggerAlert(u);
         }
@@ -222,8 +216,14 @@ void MessageDistDeliverer::Visit(PlayerMapType& m)
         if (!target->InSamePhase(i_phaseMask))
             continue;
 
-        if (target->GetExactDist2dSq(i_source) > i_distSq)
-            continue;
+        if (required3dDist)
+        {
+            if (target->GetExactDistSq(i_source) > i_distSq)
+                continue;
+        }
+        else
+            if (target->GetExactDist2dSq(i_source) > i_distSq)
+                continue;
 
         // Send packet to all who are sharing the player's vision
         if (target->HasSharedVision())
@@ -247,8 +247,14 @@ void MessageDistDeliverer::Visit(CreatureMapType& m)
         if (!target->HasSharedVision() || !target->InSamePhase(i_phaseMask))
             continue;
 
-        if (target->GetExactDist2dSq(i_source) > i_distSq)
-            continue;
+        if (required3dDist)
+        {
+            if (target->GetExactDistSq(i_source) > i_distSq)
+                continue;
+        }
+        else
+            if (target->GetExactDist2dSq(i_source) > i_distSq)
+                continue;
 
         // Send packet to all who are sharing the creature's vision
         SharedVisionList::const_iterator i = target->GetSharedVisionList().begin();
@@ -270,8 +276,14 @@ void MessageDistDeliverer::Visit(DynamicObjectMapType& m)
         if (!target->IsViewpoint())
             continue;
 
-        if (target->GetExactDist2dSq(i_source) > i_distSq)
-            continue;
+        if (required3dDist)
+        {
+            if (target->GetExactDistSq(i_source) > i_distSq)
+                continue;
+        }
+        else
+            if (target->GetExactDist2dSq(i_source) > i_distSq)
+                continue;
 
         // Send packet back to the caster if the caster has vision of dynamic object
         Player* caster = (Player*)target->GetCaster();

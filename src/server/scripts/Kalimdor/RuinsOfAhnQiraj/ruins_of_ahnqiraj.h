@@ -19,7 +19,6 @@
 #define DEF_RUINS_OF_AHNQIRAJ_H
 
 #include "CreatureAIImpl.h"
-#include "../scripts/Custom/Timewalking/10Man.h"
 
 #define DataHeader "RA"
 #define RuinsOfAhnQirajScriptName "instance_ruins_of_ahnqiraj"

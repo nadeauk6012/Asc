@@ -132,8 +132,6 @@ public:
     void LoadResetTimes();
     void LoadInstanceSaves();
     void LoadCharacterBinds();
-    void LoadInstanceSavesAndBindsForMapIDs(std::vector<uint32> mapIDs, InstanceSaveHashMap &instanceSaveStorage, PlayerBindStorage &playerBindStorage);
-    void MergeWithNewInstanceSaves(InstanceSaveHashMap newInstanceSaves, PlayerBindStorage playerBindStorage);
 
     [[nodiscard]] time_t GetResetTimeFor(uint32 mapid, Difficulty d) const
     {

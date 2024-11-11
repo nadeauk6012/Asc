@@ -104,14 +104,11 @@ public:                                                 // accessors
         return ReputationRankStrIndex[GetRank(factionEntry)];
     };
 
-ReputationRank const* GetForcedRankIfAny(FactionTemplateEntry const* factionTemplateEntry) const
-{
-    if (!factionTemplateEntry)
-        return nullptr;
-
-    ForcedReactions::const_iterator forceItr = _forcedReactions.find(factionTemplateEntry->faction);
-    return forceItr != _forcedReactions.end() ? &forceItr->second : nullptr;
-}
+    ReputationRank const* GetForcedRankIfAny(FactionTemplateEntry const* factionTemplateEntry) const
+    {
+        ForcedReactions::const_iterator forceItr = _forcedReactions.find(factionTemplateEntry->faction);
+        return forceItr != _forcedReactions.end() ? &forceItr->second : nullptr;
+    }
 
 public:                                                 // modifiers
     bool SetReputation(FactionEntry const* factionEntry, float standing)

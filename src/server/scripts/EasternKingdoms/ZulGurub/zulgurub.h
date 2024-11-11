@@ -19,8 +19,6 @@
 #define DEF_ZULGURUB_H
 
 #include "CreatureAIImpl.h"
-#include "../scripts/Custom/Timewalking/10Man.h"
-
 
 uint32 const EncounterCount = 13;
 
@@ -72,8 +70,7 @@ enum CreatureIds
     NPC_GRILEK              = 15082,
     NPC_HAZZARAH            = 15083,
     NPC_RENATAKI            = 15084,
-    NPC_WUSHOOLAY           = 15085,
-    NPC_VOODOO_PILE         = 113682
+    NPC_WUSHOOLAY           = 15085
 };
 
 enum GameobjectIds

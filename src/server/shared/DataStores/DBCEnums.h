@@ -45,11 +45,11 @@ struct DBCPosition3D
 enum BattlegroundBracketId : uint8                                  // bracketId for level ranges
 {
     BG_BRACKET_ID_FIRST          = 0,
-    BG_BRACKET_ID_LAST           = 16
+    BG_BRACKET_ID_LAST           = 15
 };
 
 // must be max value in PvPDificulty slot+1
-#define MAX_BATTLEGROUND_BRACKETS  17
+#define MAX_BATTLEGROUND_BRACKETS  16
 
 enum AreaTeams
 {

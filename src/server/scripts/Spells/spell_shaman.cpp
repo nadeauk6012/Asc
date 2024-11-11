@@ -15,22 +15,18 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "CreatureScript.h"
+#include "GridNotifiers.h"
+#include "SpellAuraEffects.h"
+#include "SpellMgr.h"
+#include "SpellScript.h"
+#include "SpellScriptLoader.h"
+#include "Unit.h"
 /*
  * Scripts for spells with SPELLFAMILY_SHAMAN and SPELLFAMILY_GENERIC spells used by shaman players.
  * Ordered alphabetically using scriptname.
  * Scriptnames of files in this file should be prefixed with "spell_sha_".
  */
-
-#include "CreatureScript.h"
-#include "GridNotifiers.h"
-#include "ScriptMgr.h"
-#include "SpellAuraEffects.h"
-#include "SpellMgr.h"
-#include "SpellScript.h"
-#include "SpellScriptLoader.h"
-#include "TemporarySummon.h"
-#include "Unit.h"
-#include "Player.h"
 
 enum ShamanSpells
 {
@@ -72,89 +68,6 @@ enum ShamanSpellIcons
     SHAMAN_ICON_ID_RESTORATIVE_TOTEMS           = 338,
     SHAMAN_ICON_ID_SHAMAN_LAVA_FLOW             = 3087
 };
-
-// Dinkle T2 Enhance
-class spell_sha_feral_spirit : public SpellScript
-{
-    PrepareSpellScript(spell_sha_feral_spirit);
-
-    void HandleOnHit()
-    {
-        if (Unit* caster = GetCaster())
-        {
-            if (caster->HasAura(870830))
-            {
-                caster->CastSpell(caster, 870831, true);
-            }
-        }
-    }
-
-    void Register() override
-    {
-        OnHit += SpellHitFn(spell_sha_feral_spirit::HandleOnHit);
-    }
-};
-
-void AddSC_custom_spell_scripts()
-{
-    RegisterSpellScript(spell_sha_feral_spirit);
-}
-
-class spell_sha_stormstrike : public SpellScript
-{
-    PrepareSpellScript(spell_sha_stormstrike);
-
-    void HandleOnHit()
-    {
-        Unit* caster = GetCaster();
-        if (caster && caster->IsPlayer() && !caster->ToPlayer()->IsNPCBotOrPet() && caster->HasAura(838432))
-        {
-            // 50% chance to cast the spell
-            if (urand(0, 1)) 
-            {
-                caster->CastSpell(caster, 838430, true);
-            }
-        }
-    }
-
-    void Register() override
-    {
-        OnHit += SpellHitFn(spell_sha_stormstrike::HandleOnHit);
-    }
-};
-
-void AddSC_custom_spell_stormstrike()
-{
-    RegisterSpellScript(spell_sha_stormstrike);
-}
-
-class spell_sham_earth_shock : public SpellScript
-{
-    PrepareSpellScript(spell_sham_earth_shock);
-
-    void HandleAfterCast()
-    {
-        Unit* caster = GetCaster();
-        // Check if the caster is a player and not an NPC bot
-        if (caster && caster->IsPlayer() && !caster->ToPlayer()->IsNPCBotOrPet() && caster->HasAura(890013))
-        {
-            if (Unit* target = GetExplTargetUnit())
-            {
-                caster->CastSpell(target, 37548, true);
-            }
-        }
-    }
-
-    void Register() override
-    {
-        AfterCast += SpellCastFn(spell_sham_earth_shock::HandleAfterCast);
-    }
-};
-
-void AddSC_custom_spell_earth_shock()
-{
-    RegisterSpellScript(spell_sham_earth_shock);
-}
 
 class spell_sha_totem_of_wrath : public SpellScript
 {
@@ -302,7 +215,7 @@ class spell_sha_feral_spirit_scaling : public AuraScript
             amount = CalculatePct(std::max<int32>(0, owner->GetTotalAttackPowerValue(BASE_ATTACK)), modifier);
 
             // xinef: Update appropriate player field
-            if (owner->GetTypeId() == TYPEID_PLAYER)
+            if (owner->IsPlayer())
                 owner->SetUInt32Value(PLAYER_PET_SPELL_POWER, (uint32)amount);
         }
     }
@@ -411,7 +324,7 @@ class spell_sha_fire_elemental_scaling : public AuraScript
             amount = CalculatePct(std::max<int32>(0, fire), 100);
 
             // xinef: Update appropriate player field
-            if (owner->GetTypeId() == TYPEID_PLAYER)
+            if (owner->IsPlayer())
                 owner->SetUInt32Value(PLAYER_PET_SPELL_POWER, (uint32)amount);
         }
     }
@@ -560,19 +473,12 @@ class spell_sha_chain_heal : public SpellScript
             // Check if the target has Riptide
             if (AuraEffect* aurEff = GetHitUnit()->GetAuraEffect(SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_SHAMAN, 0, 0, 0x10, GetCaster()->GetGUID()))
             {
-                riptide = true; // Set riptide to true for increased healing
-
-                // Check if the caster does NOT have the aura 888888
-                if (!GetCaster()->HasAura(888888))
-                {
-                    // Consume Riptide
-                    GetHitUnit()->RemoveAura(aurEff->GetBase());
-                }
-                // If the caster has the aura 888888, Riptide will not be consumed due to the above check
+                riptide = true;
+                // Consume it
+                GetHitUnit()->RemoveAura(aurEff->GetBase());
             }
             firstHeal = false;
         }
-
         // Riptide increases the Chain Heal effect by 25%
         if (riptide)
             SetHitHeal(GetHitHeal() * 1.25f);
@@ -679,16 +585,6 @@ class spell_sha_earthbind_totem : public AuraScript
     {
         if (!GetCaster())
             return;
-
-        //npcbot: workaround for bots
-        if (ObjectGuid creatorGuid = GetCaster()->GetCreatorGUID())
-            if (!creatorGuid.IsPlayer())
-                if (Creature const* bot = ObjectAccessor::GetCreature(*GetCaster(), creatorGuid))
-                    if (AuraEffect const* aur = bot->GetDummyAuraEffect(SPELLFAMILY_SHAMAN, 2289, 0))
-                        if (roll_chance_i(aur->GetBaseAmount()))
-                            GetTarget()->CastSpell((Unit*)nullptr, SPELL_SHAMAN_TOTEM_EARTHEN_POWER, true);
-        //end npcbot
-
         if (Player* owner = GetCaster()->GetCharmerOrOwnerPlayerOrPlayerItself())
             if (AuraEffect* aur = owner->GetDummyAuraEffect(SPELLFAMILY_SHAMAN, 2289, 0))
                 if (roll_chance_i(aur->GetBaseAmount()))
@@ -1055,7 +951,7 @@ class spell_sha_lava_lash : public SpellScript
 
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     void HandleDummy(SpellEffIndex /*effIndex*/)
@@ -1064,9 +960,9 @@ class spell_sha_lava_lash : public SpellScript
         {
             int32 damage = GetEffectValue();
             int32 hitDamage = GetHitDamage();
-            if (caster->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND))
+            if (caster->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND))
             {
-                // Damage is increased by 25% if your DINKLE main-hand weapon is enchanted with Flametongue.
+                // Damage is increased by 25% if your off-hand weapon is enchanted with Flametongue.
                 if (caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_SHAMAN, 0x200000, 0, 0))
                     AddPct(hitDamage, damage);
                 SetHitDamage(hitDamage);
@@ -1153,7 +1049,7 @@ class spell_sha_sentry_totem : public AuraScript
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (Unit* caster = GetCaster())
-            if (caster->GetTypeId() == TYPEID_PLAYER)
+            if (caster->IsPlayer())
                 caster->ToPlayer()->StopCastingBindSight();
     }
 
@@ -1280,8 +1176,4 @@ void AddSC_shaman_spell_scripts()
     RegisterSpellScript(spell_sha_thunderstorm);
     RegisterSpellScript(spell_sha_flurry_proc);
     RegisterSpellScript(spell_sha_t8_electrified);
-    RegisterSpellScript(spell_sham_earth_shock);
-    RegisterSpellScript(spell_sha_stormstrike);
-    RegisterSpellScript(spell_sha_feral_spirit);
 }
-

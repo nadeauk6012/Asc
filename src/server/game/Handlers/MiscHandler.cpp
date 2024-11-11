@@ -45,13 +45,14 @@
 #include "ScriptMgr.h"
 #include "SocialMgr.h"
 #include "Spell.h"
-#include "UpdateData.h"
 #include "Vehicle.h"
 #include "WhoListCacheMgr.h"
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
 #include <zlib.h>
+
+#include "Corpse.h"
 
 void WorldSession::HandleRepopRequestOpcode(WorldPacket& recv_data)
 {
@@ -218,10 +219,12 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
     std::array<uint32, 10> zoneids = {};                    // 10 is client limit
     std::string packetPlayerName, packetGuildName;
 
-    recvData >> levelMin;                                   // minimal player level, default 0
-    recvData >> levelMax;                                   // maximal player level, default 100 (MAX_LEVEL)
+    recvData >> levelMin;                                   // maximal player level, default 0
+    recvData >> levelMax;                                   // minimal player level, default 100 (MAX_LEVEL)
     recvData >> packetPlayerName;                           // player name, case sensitive...
+
     recvData >> packetGuildName;                            // guild name, case sensitive...
+
     recvData >> racemask;                                   // race mask
     recvData >> classmask;                                  // class mask
     recvData >> zonesCount;                                 // zones count, client limit = 10 (2.0.10)
@@ -265,7 +268,7 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
         return;
 
     wstrToLower(wpacketPlayerName);
-    wstrToLower(wpacketGuildName);
+    wstrToLower(wpacketGuildName);;
 
     // client send in case not set max level value 100 but Acore supports 255 max level,
     // update it to show GMs with characters after 100 level
@@ -282,7 +285,6 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
     data << uint32(matchCount);         // placeholder, count of players matching criteria
     data << uint32(displaycount);       // placeholder, count of players displayed
 
-    // Retrieve real players matching the criteria
     for (auto const& target : sWhoListCacheMgr->GetWhoList())
     {
         if (AccountMgr::IsPlayerAccount(security))
@@ -404,127 +406,6 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
         data << uint32(playerZoneId);                     // player zone id
 
         ++displaycount;
-    }
-
-    // Check the config option for including fake players
-    if (sWorld->getBoolConfig(CONFIG_INCLUDE_FAKE_PLAYERS))
-    {
-        // Retrieve fake players from custom table
-        QueryResult result = CharacterDatabase.Query("SELECT name, guild, level, class, race, gender, zone FROM custom_fake_players");
-
-        if (result)
-        {
-            do
-            {
-                Field* fields = result->Fetch();
-                std::string fakePlayerName = fields[0].Get<std::string>();
-                std::string fakeGuildName = fields[1].Get<std::string>();
-                uint8 fakeLevel = fields[2].Get<uint32>();
-                uint8 fakeClass = fields[3].Get<uint32>();
-                uint8 fakeRace = fields[4].Get<uint32>();
-                uint8 fakeGender = fields[5].Get<uint32>();
-                uint32 fakeZoneId = fields[6].Get<uint32>();
-
-                // Check if fake player's level is in level range
-                if (fakeLevel < levelMin || fakeLevel > levelMax)
-                {
-                    continue;
-                }
-
-                // Check if class matches classmask
-                if (!(classmask & (1 << fakeClass)))
-                {
-                    continue;
-                }
-
-                // Check if race matches racemask
-                if (!(racemask & (1 << fakeRace)))
-                {
-                    continue;
-                }
-
-                bool showZones = true;
-                for (uint32 i = 0; i < zonesCount; ++i)
-                {
-                    if (zoneids[i] == fakeZoneId)
-                    {
-                        showZones = true;
-                        break;
-                    }
-
-                    showZones = false;
-                }
-
-                if (!showZones)
-                {
-                    continue;
-                }
-
-                std::wstring wfakePlayerName;
-                std::wstring wfakeGuildName;
-                if (!(Utf8toWStr(fakePlayerName, wfakePlayerName) && Utf8toWStr(fakeGuildName, wfakeGuildName)))
-                    continue;
-
-                wstrToLower(wfakePlayerName);
-                wstrToLower(wfakeGuildName);
-
-                if (!(wpacketPlayerName.empty() || wfakePlayerName.find(wpacketPlayerName) != std::wstring::npos))
-                {
-                    continue;
-                }
-
-                if (!(wpacketGuildName.empty() || wfakeGuildName.find(wpacketGuildName) != std::wstring::npos))
-                {
-                    continue;
-                }
-
-                std::string aname;
-                if (AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(fakeZoneId))
-                {
-                    aname = areaEntry->area_name[GetSessionDbcLocale()];
-                }
-
-                bool s_show = true;
-                for (uint32 i = 0; i < strCount; ++i)
-                {
-                    if (!str[i].empty())
-                    {
-                        if (wfakeGuildName.find(str[i]) != std::wstring::npos ||
-                            wfakePlayerName.find(str[i]) != std::wstring::npos ||
-                            Utf8FitTo(aname, str[i]))
-                        {
-                            s_show = true;
-                            break;
-                        }
-
-                        s_show = false;
-                    }
-                }
-
-                if (!s_show)
-                {
-                    continue;
-                }
-
-                // 49 is maximum player count sent to client - can be overridden
-                // through config, but is unstable
-                if ((matchCount++) >= sWorld->getIntConfig(CONFIG_MAX_WHO_LIST_RETURN))
-                {
-                    continue;
-                }
-
-                data << fakePlayerName;                        // fake player name
-                data << fakeGuildName;                         // fake guild name
-                data << uint32(fakeLevel);                     // fake player level
-                data << uint32(fakeClass);                     // fake player class
-                data << uint32(fakeRace);                      // fake player race
-                data << uint8(fakeGender);                     // fake player gender
-                data << uint32(fakeZoneId);                    // fake player zone id
-
-                ++displaycount;
-
-            } while (result->NextRow());
-        }
     }
 
     data.put(0, displaycount);                            // insert right count, count displayed
@@ -730,7 +611,7 @@ void WorldSession::HandleCharacterAuraFrozen(PreparedQueryResult result)
     {
         Field* fields = result->Fetch();
         std::string player = fields[0].Get<std::string>();
-        handler.PSendSysMessage(LANG_COMMAND_FROZEN_PLAYERS, player.c_str());
+        handler.PSendSysMessage(LANG_COMMAND_FROZEN_PLAYERS, player);
     } while (result->NextRow());
 }
 
@@ -775,11 +656,7 @@ void WorldSession::HandleReclaimCorpseOpcode(WorldPacket& recv_data)
     if (time_t(corpse->GetGhostTime() + _player->GetCorpseReclaimDelay(corpse->GetType() == CORPSE_RESURRECTABLE_PVP)) > time_t(GameTime::GetGameTime().count()))
         return;
 
-    // Use CORPSE_RECLAIM_RADIUS for battlegrounds, otherwise use 120 EDIT: Apparently there's a client limit
-    float resurrectionRadius = _player->InBattleground() ? CORPSE_RECLAIM_RADIUS : 120.0f;
-    
-    // Check if the corpse is within the defined resurrection radius
-    if (!corpse->IsWithinDistInMap(_player, resurrectionRadius, true))
+    if (!corpse->IsWithinDistInMap(_player, CORPSE_RECLAIM_RADIUS, true))
         return;
 
     // resurrect
@@ -1242,7 +1119,7 @@ void WorldSession::HandleWorldTeleportOpcode(WorldPacket& recv_data)
     if (AccountMgr::IsAdminAccount(GetSecurity()))
         GetPlayer()->TeleportTo(mapid, PositionX, PositionY, PositionZ, Orientation);
     else
-        SendNotification(LANG_PERMISSION_DENIED);
+        ChatHandler(this).SendNotification(LANG_PERMISSION_DENIED);
 }
 
 void WorldSession::HandleWhoisOpcode(WorldPacket& recv_data)
@@ -1253,13 +1130,13 @@ void WorldSession::HandleWhoisOpcode(WorldPacket& recv_data)
 
     if (!AccountMgr::IsAdminAccount(GetSecurity()))
     {
-        SendNotification(LANG_PERMISSION_DENIED);
+        ChatHandler(this).SendNotification(LANG_PERMISSION_DENIED);
         return;
     }
 
     if (charname.empty() || !normalizePlayerName (charname))
     {
-        SendNotification(LANG_NEED_CHARACTER_NAME);
+        ChatHandler(this).SendNotification(LANG_NEED_CHARACTER_NAME);
         return;
     }
 
@@ -1267,7 +1144,7 @@ void WorldSession::HandleWhoisOpcode(WorldPacket& recv_data)
 
     if (!player)
     {
-        SendNotification(LANG_PLAYER_NOT_EXIST_OR_OFFLINE, charname.c_str());
+        ChatHandler(this).SendNotification(LANG_PLAYER_NOT_EXIST_OR_OFFLINE, charname.c_str());
         return;
     }
 
@@ -1281,7 +1158,7 @@ void WorldSession::HandleWhoisOpcode(WorldPacket& recv_data)
 
     if (!result)
     {
-        SendNotification(LANG_ACCOUNT_FOR_PLAYER_NOT_FOUND, charname.c_str());
+        ChatHandler(this).SendNotification(LANG_ACCOUNT_FOR_PLAYER_NOT_FOUND, charname.c_str());
         return;
     }
 
@@ -1526,11 +1403,11 @@ void WorldSession::HandleSetRaidDifficultyOpcode(WorldPacket& recv_data)
                 switch (group->GetDifficultyChangePreventionReason())
                 {
                     case DIFFICULTY_PREVENTION_CHANGE_BOSS_KILLED:
-                        ChatHandler(this).PSendSysMessage("Raid was in combat recently and may not change difficulty again for %u sec.", preventionTime);
+                        ChatHandler(this).PSendSysMessage("Raid was in combat recently and may not change difficulty again for {} sec.", preventionTime);
                         break;
                     case DIFFICULTY_PREVENTION_CHANGE_RECENTLY_CHANGED:
                     default:
-                        ChatHandler(this).PSendSysMessage("Raid difficulty has changed recently, and may not change again for %u sec.", preventionTime);
+                        ChatHandler(this).PSendSysMessage("Raid difficulty has changed recently, and may not change again for {} sec.", preventionTime);
                         break;
                 }
 
@@ -1831,7 +1708,7 @@ void WorldSession::HandleHearthAndResurrect(WorldPacket& /*recv_data*/)
     if (_player->IsInFlight())
         return;
 
-    if(Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(_player->GetZoneId()))
+    if (Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(_player->GetZoneId()))
     {
         bf->PlayerAskToLeave(_player);
         return;
@@ -1844,7 +1721,7 @@ void WorldSession::HandleHearthAndResurrect(WorldPacket& /*recv_data*/)
     _player->BuildPlayerRepop();
     _player->ResurrectPlayer(1.0f);
     _player->SpawnCorpseBones();
-    _player->TeleportTo(_player->m_homebindMapId, _player->m_homebindX, _player->m_homebindY, _player->m_homebindZ, _player->m_homebindO);
+    _player->TeleportTo(_player->m_homebindMapId, _player->m_homebindX, _player->m_homebindY, _player->m_homebindZ, _player->GetOrientation());
 }
 
 void WorldSession::HandleInstanceLockResponse(WorldPacket& recvPacket)

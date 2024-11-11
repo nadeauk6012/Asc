@@ -316,42 +316,6 @@ bool fillArchiveNameVector(std::vector<std::string>& pArchiveNames)
     pArchiveNames.push_back(input_path + string("common-2.MPQ"));
     pArchiveNames.push_back(input_path + string("expansion.MPQ"));
     pArchiveNames.push_back(input_path + string("lichking.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-2.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-3.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-4.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-5.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-6.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-7.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-8.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-9.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-A.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-B.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-C.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-D.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-E.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-F.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-G.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-H.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-I.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-J.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-K.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-L.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-M.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-N.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-O.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-P.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-Q.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-R.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-S.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-T.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-U.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-V.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-W.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-X.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-Y.MPQ"));
-    pArchiveNames.push_back(input_path + string("patch-Z.MPQ"));
-
 
     // now, scan for the patch levels in the core dir
     printf("Scanning patch levels from data directory.\n");
@@ -521,7 +485,7 @@ int main(int argc, char** argv)
             map_ids[x].id = dbc->getRecord(x).getUInt(0);
 
             char const* map_name = dbc->getRecord(x).getString(1);
-            size_t max_map_name_length = sizeof(map_ids[x].name);
+            std::size_t max_map_name_length = sizeof(map_ids[x].name);
             if (strlen(map_name) >= max_map_name_length)
             {
                 delete dbc;

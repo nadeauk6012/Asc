@@ -45,16 +45,13 @@
 #include "SocialMgr.h"
 #include "Transport.h"
 #include "Vehicle.h"
-#include "WardenMac.h"
 #include "WardenWin.h"
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSocket.h"
 #include <zlib.h>
 
-//npcbot
-#include "botmgr.h"
-//end npcbot
+#include "BanMgr.h"
 
 namespace
 {
@@ -572,7 +569,7 @@ void WorldSession::HandleTeleportTimeout(bool updateInSessions)
 }
 
 /// %Log the player out
-void WorldSession::LogoutPlayer(bool save, bool redirecting)
+void WorldSession::LogoutPlayer(bool save)
 {
     // finish pending transfers before starting the logout
     while (_player && _player->IsBeingTeleportedFar())
@@ -580,12 +577,6 @@ void WorldSession::LogoutPlayer(bool save, bool redirecting)
 
     m_playerLogout = true;
     m_playerSave = save;
-
-    //npcbot - free all bots and remove from botmap
-    if (_player->HaveBot() && _player->GetGroup() && !_player->GetGroup()->isRaidGroup() && !_player->GetGroup()->isLFGGroup() && m_Socket && sWorld->getBoolConfig(CONFIG_LEAVE_GROUP_ON_LOGOUT))
-        _player->GetBotMgr()->RemoveAllBotsFromGroup();
-    _player->RemoveAllBots();
-    //end npcbots
 
     if (_player)
     {
@@ -645,6 +636,9 @@ void WorldSession::LogoutPlayer(bool save, bool redirecting)
                     sScriptMgr->OnBattlegroundDesertion(_player, BG_DESERTION_TYPE_INVITE_LOGOUT);
                 }
 
+                if (bgQueueTypeId >= BATTLEGROUND_QUEUE_2v2 && bgQueueTypeId < MAX_BATTLEGROUND_QUEUE_TYPES && _player->IsInvitedForBattlegroundQueueType(bgQueueTypeId))
+                    sScriptMgr->OnBattlegroundDesertion(_player, ARENA_DESERTION_TYPE_INVITE_LOGOUT);
+
                 _player->RemoveBattlegroundQueueId(bgQueueTypeId);
                 sBattlegroundMgr->GetBattlegroundQueue(bgQueueTypeId).RemovePlayer(_player->GetGUID(), true);
             }
@@ -660,19 +654,18 @@ void WorldSession::LogoutPlayer(bool save, bool redirecting)
         // there are some positive auras from boss encounters that can be kept by logging out and logging in after boss is dead, and may be used on next bosses
         _player->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_CHANGE_MAP);
 
-        if (!redirecting)
-        {
-            ///- If the player is in a group and LeaveGroupOnLogout is enabled or if the player is invited to a group, remove him. If the group is then only 1 person, disband the group.
-            if (!_player->GetGroup() || sWorld->getBoolConfig(CONFIG_LEAVE_GROUP_ON_LOGOUT))
-                _player->UninviteFromGroup();
-            // remove player from the group if he is:
-            // a) in group; b) not in raid group; c) logging out normally (not being kicked or disconnected) d) LeaveGroupOnLogout is enabled
-            if (!sToCloud9Sidecar->ClusterModeEnabled() && _player->GetGroup() && !_player->GetGroup()->isRaidGroup() && !_player->GetGroup()->isLFGGroup() && m_Socket && sWorld->getBoolConfig(CONFIG_LEAVE_GROUP_ON_LOGOUT))
-                _player->RemoveFromGroup();
-            // pussywizard: checked second time after being removed from a group
-            if (!_player->IsBeingTeleportedFar() && !_player->m_InstanceValid && !_player->IsGameMaster())
-                _player->RepopAtGraveyard();
-        }
+        ///- If the player is in a group and LeaveGroupOnLogout is enabled or if the player is invited to a group, remove him. If the group is then only 1 person, disband the group.
+        if (!_player->GetGroup() || sWorld->getBoolConfig(CONFIG_LEAVE_GROUP_ON_LOGOUT))
+            _player->UninviteFromGroup();
+
+        // remove player from the group if he is:
+        // a) in group; b) not in raid group; c) logging out normally (not being kicked or disconnected) d) LeaveGroupOnLogout is enabled
+        if (_player->GetGroup() && !_player->GetGroup()->isRaidGroup() && !_player->GetGroup()->isLFGGroup() && m_Socket && sWorld->getBoolConfig(CONFIG_LEAVE_GROUP_ON_LOGOUT))
+            _player->RemoveFromGroup();
+
+        // pussywizard: checked second time after being removed from a group
+        if (!_player->IsBeingTeleportedFar() && !_player->m_InstanceValid && !_player->IsGameMaster())
+            _player->RepopAtGraveyard();
 
         // Repop at GraveYard or other player far teleport will prevent saving player because of not present map
         // Teleport player immediately for correct player save
@@ -711,15 +704,12 @@ void WorldSession::LogoutPlayer(bool save, bool redirecting)
             }
         }
 
-        if (!redirecting)
-        {
-            //! Broadcast a logout message to the player's friends
-            sSocialMgr->SendFriendStatus(_player, FRIEND_OFFLINE, _player->GetGUID(), true);
-            sSocialMgr->RemovePlayerSocial(_player->GetGUID());
+        //! Broadcast a logout message to the player's friends
+        sSocialMgr->SendFriendStatus(_player, FRIEND_OFFLINE, _player->GetGUID(), true);
+        sSocialMgr->RemovePlayerSocial(_player->GetGUID());
 
-            //! Call script hook before deletion
-            sScriptMgr->OnPlayerLogout(_player);
-        }
+        //! Call script hook before deletion
+        sScriptMgr->OnPlayerLogout(_player);
 
         METRIC_EVENT("player_events", "Logout", _player->GetName());
 
@@ -799,44 +789,14 @@ bool WorldSession::DisallowHyperlinksAndMaybeKick(std::string_view str)
     return false;
 }
 
-void WorldSession::SendNotification(const char* format, ...)
-{
-    if (format)
-    {
-        va_list ap;
-        char szStr[1024];
-        szStr[0] = '\0';
-        va_start(ap, format);
-        vsnprintf(szStr, 1024, format, ap);
-        va_end(ap);
-
-        WorldPacket data(SMSG_NOTIFICATION, (strlen(szStr) + 1));
-        data << szStr;
-        SendPacket(&data);
-    }
-}
-
-void WorldSession::SendNotification(uint32 string_id, ...)
-{
-    char const* format = GetAcoreString(string_id);
-    if (format)
-    {
-        va_list ap;
-        char szStr[1024];
-        szStr[0] = '\0';
-        va_start(ap, string_id);
-        vsnprintf(szStr, 1024, format, ap);
-        va_end(ap);
-
-        WorldPacket data(SMSG_NOTIFICATION, (strlen(szStr) + 1));
-        data << szStr;
-        SendPacket(&data);
-    }
-}
-
 char const* WorldSession::GetAcoreString(uint32 entry) const
 {
     return sObjectMgr->GetAcoreString(entry, GetSessionDbLocaleIndex());
+}
+
+std::string const* WorldSession::GetModuleString(std::string module, uint32 id) const
+{
+    return sObjectMgr->GetModuleString(module, id, GetSessionDbLocaleIndex());
 }
 
 void WorldSession::Handle_NULL(WorldPacket& null)
@@ -1030,7 +990,7 @@ void WorldSession::ReadMovementInfo(WorldPacket& data, MovementInfo* mi)
     if (mi->HasMovementFlag(MOVEMENTFLAG_SPLINE_ELEVATION))
         data >> mi->splineElevation;
 
-    //! Anti-cheat checks. Please keep them in seperate if() blocks to maintain a clear overview.
+    //! Anti-cheat checks. Please keep them in seperate if () blocks to maintain a clear overview.
     //! Might be subject to latency, so just remove improper flags.
 #ifdef ACORE_DEBUG
 #define REMOVE_VIOLATING_FLAGS(check, maskToRemove) \
@@ -1637,17 +1597,6 @@ uint32 WorldSession::DosProtection::GetMaxPacketCounterAllowed(uint16 opcode) co
                 break;
             }
 
-        //npcbot: prevent kicks when too many bots spawned in one spot
-        case CMSG_GET_MIRRORIMAGE_DATA:
-        {
-            if (BotMgr::GetBotInfoPacketsLimit() > -1)
-                maxPacketCounterAllowed = BotMgr::GetBotInfoPacketsLimit();
-            else
-                maxPacketCounterAllowed = 100;
-            break;
-        }
-        //end npcbot
-
         default:
             {
                 maxPacketCounterAllowed = 100;
@@ -1732,58 +1681,19 @@ void WorldSession::InitializeSessionCallback(CharacterDatabaseQueryHolder const&
     LoadAccountData(realmHolder.GetPreparedResult(AccountInfoQueryHolderPerRealm::GLOBAL_ACCOUNT_DATA), GLOBAL_CACHE_MASK);
     LoadTutorialsData(realmHolder.GetPreparedResult(AccountInfoQueryHolderPerRealm::TUTORIALS));
 
-    if (!sToCloud9Sidecar->ClusterModeEnabled())
+    if (!m_inQueue)
     {
-        if (!m_inQueue)
-        {
-            SendAuthResponse(AUTH_OK, true);
-        }
-        else
-        {
-            SendAuthWaitQueue(0);
-        }
+        SendAuthResponse(AUTH_OK, true);
+    }
+    else
+    {
+        SendAuthWaitQueue(0);
     }
 
     SetInQueue(false);
     ResetTimeOutTime(false);
 
-    if (!sToCloud9Sidecar->ClusterModeEnabled())
-    {
-        SendAddonsInfo();
-        SendClientCacheVersion(clientCacheVersion);
-        SendTutorialsData();
-    }
-}
-void WorldSession::HandleTC9PrepareForRedirect(WorldPacket& /*recvData*/)
-{
-    if (!sToCloud9Sidecar->ClusterModeEnabled())
-        return;
-    Player * player = this->GetPlayer();
-    if (player == nullptr)
-    {
-        WorldPacket data(TC9_SMSG_READY_FOR_REDIRECT, 1);
-        data << uint8(1); // 1 - Failed.
-        SendPacket(&data);
-    }
-    LOG_DEBUG("network", "Starting saving, AccountId = {}", GetAccountId());
-    
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
-    player->SaveToDB(trans, false, true);
-    AddTransactionCallback(CharacterDatabase.AsyncCommitTransaction(trans)).AfterComplete([this](bool success)
-    {
-        WorldPacket data(TC9_SMSG_READY_FOR_REDIRECT, 1);
-        data << uint8(!success); // 0 - Success, 1 - Failed.
-        SendPacket(&data);
-        
-        if (!success)
-        {
-            LOG_ERROR("network", "Failed to save player, AccountId = %d", GetAccountId());
-            return;
-        }
-        
-        LOG_DEBUG("network", "Saved, AccountId = %d", GetAccountId());
-        
-        KickPlayer("HandlePrepareForRedirect client redirected");
-        LogoutPlayer(false, true);
-    });
+    SendAddonsInfo();
+    SendClientCacheVersion(clientCacheVersion);
+    SendTutorialsData();
 }

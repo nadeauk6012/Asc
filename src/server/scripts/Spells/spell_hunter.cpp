@@ -15,25 +15,21 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
-/*
- * Scripts for spells with SPELLFAMILY_HUNTER, SPELLFAMILY_PET and SPELLFAMILY_GENERIC spells used by hunter players.
- * Ordered alphabetically using scriptname.
- * Scriptnames of files in this file should be prefixed with "spell_hun_".
- */
-
 #include "Cell.h"
 #include "CellImpl.h"
 #include "CreatureScript.h"
 #include "GridNotifiers.h"
 #include "Pet.h"
-#include "Player.h"
-#include "ScriptMgr.h"
 #include "SpellAuraEffects.h"
 #include "SpellAuras.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
+/*
+ * Scripts for spells with SPELLFAMILY_HUNTER, SPELLFAMILY_PET and SPELLFAMILY_GENERIC spells used by hunter players.
+ * Ordered alphabetically using scriptname.
+ * Scriptnames of files in this file should be prefixed with "spell_hun_".
+ */
 
 /// @todo: this import is not necessary for compilation and marked as unused by the IDE
 //  however, for some reasons removing it would cause a damn linking issue
@@ -76,42 +72,6 @@ enum HunterSpells
     SPELL_LOCK_AND_LOAD_MARKER                      = 67544,
     SPELL_HUNTER_PET_LEGGINGS_OF_BEAST_MASTERY      = 38297, // Leggings of Beast Mastery
 };
-
-
-class HunterTalents : public PlayerScript
-{
-public:
-    HunterTalents() : PlayerScript("HunterTalents") {}
-
-    enum SpellIds
-    {
-        LONE_WOLF = 80028,
-        CALL_PET = 883,
-        REVIVE_PET = 982
-    };
-
-    void OnLogin(Player* player) override
-    {
-        if (player->getClass() == CLASS_HUNTER && !player->IsNPCBot())
-        {
-            player->RemoveAura(LONE_WOLF);
-        }
-    }
-
-    void OnSpellCast(Player* player, Spell* spell, bool skipCheck) override
-    {
-        if (player->getClass() == CLASS_HUNTER && !player->IsNPCBot() &&
-            (spell->GetSpellInfo()->Id == CALL_PET || spell->GetSpellInfo()->Id == REVIVE_PET))
-        {
-            player->RemoveAura(LONE_WOLF);
-        }
-    }
-};
-
-void AddSC_HunterTalents()
-{
-    new HunterTalents();
-}
 
 class spell_hun_check_pet_los : public SpellScript
 {
@@ -221,7 +181,7 @@ class spell_hun_generic_scaling : public AuraScript
             int32 modifier = 45;
 
             // xinef: Wild Hunt bonus for stamina
-            if  (AuraEffect* wildHuntEff = GetUnitOwner()->GetDummyAuraEffect(SPELLFAMILY_PET, 3748, EFFECT_0))
+            if (AuraEffect* wildHuntEff = GetUnitOwner()->GetDummyAuraEffect(SPELLFAMILY_PET, 3748, EFFECT_0))
                 AddPct(modifier, wildHuntEff->GetAmount());
 
             amount = CalculatePct(std::max<int32>(0, owner->GetStat(Stats(aurEff->GetSpellInfo()->Effects[aurEff->GetEffIndex()].MiscValue))), modifier);
@@ -271,7 +231,7 @@ class spell_hun_generic_scaling : public AuraScript
             amount = CalculatePct(std::max<int32>(0, owner->GetTotalAttackPowerValue(RANGED_ATTACK)), modifier);
 
             // xinef: Update appropriate player field
-            if (owner->GetTypeId() == TYPEID_PLAYER)
+            if (owner->IsPlayer())
                 owner->SetUInt32Value(PLAYER_PET_SPELL_POWER, (uint32)amount);
         }
     }
@@ -362,7 +322,7 @@ class spell_hun_aspect_of_the_beast : public AuraScript
 
     bool Load() override
     {
-        return GetCaster() && GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster() && GetCaster()->IsPlayer();
     }
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
@@ -695,7 +655,7 @@ class spell_hun_readiness : public SpellScript
 
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     void HandleDummy(SpellEffIndex /*effIndex*/)
@@ -711,14 +671,14 @@ class spell_hun_readiness : public SpellScript
         std::set<std::pair<uint32, bool>> spellsToRemove;
         std::set<uint32> categoriesToRemove;
 
-        for (const auto& [spellId, cooldown] : cooldowns)
+        for (auto const& [spellId, cooldown] : cooldowns)
         {
             SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
             if (spellInfo
-                && spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER
-                && spellInfo->Id != SPELL_HUNTER_READINESS
-                && spellInfo->Id != SPELL_HUNTER_BESTIAL_WRATH
-                && spellInfo->Id != SPELL_DRAENEI_GIFT_OF_THE_NAARU)
+            && spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER
+            && spellInfo->Id != SPELL_HUNTER_READINESS
+            && spellInfo->Id != SPELL_HUNTER_BESTIAL_WRATH
+            && spellInfo->Id != SPELL_DRAENEI_GIFT_OF_THE_NAARU)
             {
                 if (spellInfo->RecoveryTime > 0)
                     spellsToRemove.insert(std::make_pair(spellInfo->Id, cooldown.needSendToClient));
@@ -729,9 +689,9 @@ class spell_hun_readiness : public SpellScript
         }
 
         // we can't remove spell cooldowns while iterating.
-        for (const auto& [spellId, sendToClient] : spellsToRemove)
+        for (auto const& [spellId, sendToClient] : spellsToRemove)
             caster->RemoveSpellCooldown(spellId, sendToClient);
-        for (const auto& category : categoriesToRemove)
+        for (auto const& category : categoriesToRemove)
             caster->RemoveCategoryCooldown(category);
     }
 
@@ -748,7 +708,7 @@ class spell_hun_scatter_shot : public SpellScript
 
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     void HandleDummy(SpellEffIndex /*effIndex*/)
@@ -799,22 +759,6 @@ class spell_hun_sniper_training : public AuraScript
 
     void HandleUpdatePeriodic(AuraEffect* aurEff)
     {
-        //npcbot: handle creatures, remove dead trigger
-        if (!GetUnitOwner()->IsAlive())
-            return;
-        if (Creature const* bot = GetUnitOwner()->ToCreature())
-        {
-            if (!bot->IsNPCBot())
-                return;
-
-            int32 baseAmount = aurEff->GetBaseAmount();
-            int32 amount = bot->isMoving() || aurEff->GetAmount() <= 0 ?
-                bot->CalculateSpellDamage(bot, GetSpellInfo(), aurEff->GetEffIndex(), &baseAmount) :
-                aurEff->GetAmount() - 1;
-            aurEff->SetAmount(amount);
-            return;
-        }
-        //end npcbot
         if (Player* playerTarget = GetUnitOwner()->ToPlayer())
         {
             int32 baseAmount = aurEff->GetBaseAmount();
@@ -986,10 +930,10 @@ class spell_hun_disengage : public SpellScript
     SpellCastResult CheckCast()
     {
         Unit* caster = GetCaster();
-        if (caster->GetTypeId() == TYPEID_PLAYER)
-            return SPELL_CAST_OK;
+        if (caster->IsPlayer() && !caster->IsInCombat())
+            return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
 
-        return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
+        return SPELL_CAST_OK;
     }
 
     void Register() override
@@ -1006,7 +950,7 @@ class spell_hun_tame_beast : public SpellScript
     SpellCastResult CheckCast()
     {
         Unit* caster = GetCaster();
-        if (caster->GetTypeId() != TYPEID_PLAYER)
+        if (!caster->IsPlayer())
             return SPELL_FAILED_DONT_REPORT;
 
         Player* player = GetCaster()->ToPlayer();
@@ -1192,7 +1136,7 @@ class spell_hun_volley_trigger : public SpellScript
         {
             if (Unit* pet = *itr)
             {
-                if (pet->IsAlive() && pet->GetTypeId() == TYPEID_UNIT)
+                if (pet->IsAlive() && pet->IsCreature())
                 {
                     pet->ToCreature()->AI()->OwnerAttacked(_target->ToUnit());
                 }
@@ -1351,7 +1295,7 @@ class spell_hun_bestial_wrath : public SpellScript
     SpellCastResult CheckCast()
     {
         Unit* caster = GetCaster();
-        if (!caster || caster->GetTypeId() != TYPEID_PLAYER)
+        if (!caster || !caster->IsPlayer())
         {
             return SPELL_FAILED_NO_VALID_TARGETS;
         }
@@ -1385,23 +1329,15 @@ class spell_hun_target_self_and_pet : public SpellScript
 
     bool Load() override
     {
-        Pet* petCaster = GetCaster()->ToPet();
-        if (!petCaster)
-            return false;
-
-        Unit* petOwner = petCaster->GetOwner();
-        if (petOwner && petOwner->IsNPCBot())
-            return false;
-
-        return true;
+        return GetCaster()->IsPet();
     }
 
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         targets.remove_if([&](WorldObject const* target) -> bool
-            {
-                return target != GetCaster() && target != GetCaster()->ToPet()->GetOwner();
-            });
+        {
+            return target != GetCaster() && target != GetCaster()->ToPet()->GetOwner();
+        });
     }
 
     void Register() override
@@ -1440,7 +1376,5 @@ void AddSC_hunter_spell_scripts()
     RegisterSpellScript(spell_hun_lock_and_load);
     RegisterSpellScript(spell_hun_intimidation);
     RegisterSpellScript(spell_hun_bestial_wrath);
-    new HunterTalents();
     RegisterSpellScript(spell_hun_target_self_and_pet);
 }
-

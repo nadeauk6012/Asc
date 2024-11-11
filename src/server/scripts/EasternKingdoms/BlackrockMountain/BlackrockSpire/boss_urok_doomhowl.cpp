@@ -75,22 +75,6 @@ public:
             events.ScheduleEvent(SPELL_INTIMIDATING_ROAR, 25s, 30s);
         }
 
-        void JustDied(Unit* /*killer*/) override
-        {
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            if (players.begin() != players.end())
-            {
-                uint32 baseRewardLevel = 1;
-                bool isDungeon = me->GetMap()->IsDungeon();
-
-                Player* player = players.begin()->GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
-                }
-            }
-        }
-
         void UpdateAI(uint32 diff) override
         {
             if (!UpdateVictim())

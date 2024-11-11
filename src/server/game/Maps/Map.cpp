@@ -26,6 +26,7 @@
 #include "GridNotifiers.h"
 #include "Group.h"
 #include "InstanceScript.h"
+#include "IVMapMgr.h"
 #include "LFGMgr.h"
 #include "MapInstanced.h"
 #include "Metric.h"
@@ -39,11 +40,8 @@
 #include "Transport.h"
 #include "VMapFactory.h"
 #include "Vehicle.h"
+#include "VMapMgr2.h"
 #include "Weather.h"
-
-//npcbot
-#include "botmgr.h"
-//end npcbot
 
 union u_map_magic
 {
@@ -74,7 +72,7 @@ Map::~Map()
         WorldObject* obj = *i_worldObjects.begin();
         ASSERT(obj->IsWorldObject());
         LOG_DEBUG("maps", "Map::~Map: WorldObject TypeId is not a corpse! ({})", static_cast<uint8>(obj->GetTypeId()));
-        //ASSERT(obj->GetTypeId() == TYPEID_CORPSE);
+        //ASSERT(obj->IsCorpse());
         obj->RemoveFromWorld();
         obj->ResetMap();
     }
@@ -590,11 +588,8 @@ bool Map::AddToMap(T* obj, bool checkTransport)
     //obj->SetMap(this);
     obj->AddToWorld();
 
-    //npcbot: do not add bots to transport (handled inside AI)
-    if (!obj->IsNPCBotOrPet())
-    //end npcbot
     if (checkTransport)
-        if (!(obj->GetTypeId() == TYPEID_GAMEOBJECT && obj->ToGameObject()->IsTransport())) // dont add transport to transport ;d
+        if (!(obj->IsGameObject() && obj->ToGameObject()->IsTransport())) // dont add transport to transport ;d
             if (Transport* transport = GetTransportForPos(obj->GetPhaseMask(), obj->GetPositionX(), obj->GetPositionY(), obj->GetPositionZ(), obj))
                 transport->AddPassenger(obj, true);
 
@@ -609,7 +604,7 @@ bool Map::AddToMap(T* obj, bool checkTransport)
 
     // Xinef: little hack for vehicles, accessories have to be added after visibility update so they wont fall off the vehicle, moved from Creature::AIM_Initialize
     // Initialize vehicle, this is done only for summoned npcs, DB creatures are handled by grid loaders
-    if (obj->GetTypeId() == TYPEID_UNIT)
+    if (obj->IsCreature())
         if (Vehicle* vehicle = obj->ToCreature()->GetVehicleKit())
             vehicle->Reset();
     return true;
@@ -1041,21 +1036,6 @@ void Map::CreatureRelocation(Creature* creature, float x, float y, float z, floa
     else
         RemoveCreatureFromMoveList(creature);
 
-    //npcbot:
-    if (creature->IsNPCBotOrPet() && !creature->GetVehicle())
-    {
-        float old_orientation = creature->GetOrientation();
-        float current_z = creature->GetPositionZ();
-        bool turn = (old_orientation != o);
-        bool relocated = (creature->GetPositionX() != x || creature->GetPositionY() != y || current_z != z);
-        uint32 mask = 0;
-        if (turn) mask |= AURA_INTERRUPT_FLAG_TURNING;
-        if (relocated) mask |= AURA_INTERRUPT_FLAG_MOVE;
-        if (mask)
-            creature->RemoveAurasWithInterruptFlags(mask);
-    }
-    //end npcbot
-
     creature->Relocate(x, y, z, o);
     if (creature->IsVehicle())
         creature->GetVehicleKit()->RelocatePassengers();
@@ -1288,7 +1268,7 @@ void Map::RemoveAllPlayers()
             {
                 // this is happening for bg
                 LOG_ERROR("maps", "Map::UnloadAll: player {} is still in map {} during unload, this should not happen!", player->GetName(), GetId());
-                player->TeleportTo(player->m_homebindMapId, player->m_homebindX, player->m_homebindY, player->m_homebindZ, player->m_homebindO);
+                player->TeleportTo(player->m_homebindMapId, player->m_homebindX, player->m_homebindY, player->m_homebindZ, player->GetOrientation());
             }
         }
     }
@@ -2639,39 +2619,18 @@ void Map::SendObjectUpdates()
     while (!_updateObjects.empty())
     {
         Object* obj = *_updateObjects.begin();
+        ASSERT(obj->IsInWorld());
 
-        // Remove the object from the set at the beginning to ensure it's not processed again
         _updateObjects.erase(_updateObjects.begin());
-
-        // Check for null or invalid object and skip processing if invalid
-        if (!obj || !obj->IsInWorld())
-        {
-            continue;
-        }
-
-        try
-        {
-            obj->BuildUpdate(update_players, player_set);
-        }
-        catch (const std::exception& e)
-        {
-            continue; // Skip this object and move to the next
-        }
+        obj->BuildUpdate(update_players, player_set);
     }
 
-    WorldPacket packet; // Allocate std::vector with a size of 0x10000
+    WorldPacket packet;                                     // here we allocate a std::vector with a size of 0x10000
     for (UpdateDataMapType::iterator iter = update_players.begin(); iter != update_players.end(); ++iter)
     {
-        try
-        {
-            iter->second.BuildPacket(packet);
-            iter->first->GetSession()->SendPacket(&packet);
-            packet.clear(); // Clean the packet for the next iteration
-        }
-        catch (const std::exception& e)
-        {
-            continue; // Skip this player update and move to the next
-        }
+        iter->second.BuildPacket(packet);
+        iter->first->GetSession()->SendPacket(&packet);
+        packet.clear();                                     // clean the string
     }
 }
 
@@ -2705,8 +2664,8 @@ void Map::AddObjectToSwitchList(WorldObject* obj, bool on)
 {
     ASSERT(obj->GetMapId() == GetId() && obj->GetInstanceId() == GetInstanceId());
     // i_objectsToSwitch is iterated only in Map::RemoveAllObjectsInRemoveList() and it uses
-    // the contained objects only if GetTypeId() == TYPEID_UNIT , so we can return in all other cases
-    if (obj->GetTypeId() != TYPEID_UNIT && obj->GetTypeId() != TYPEID_GAMEOBJECT)
+    // the contained objects only if IsCreature() , so we can return in all other cases
+    if (!obj->IsCreature() && !obj->IsGameObject())
         return;
 
     std::map<WorldObject*, bool>::iterator itr = i_objectsToSwitch.find(obj);
@@ -2790,26 +2749,7 @@ uint32 Map::GetPlayersCountExceptGMs() const
     uint32 count = 0;
     for (MapRefMgr::const_iterator itr = m_mapRefMgr.begin(); itr != m_mapRefMgr.end(); ++itr)
         if (!itr->GetSource()->IsGameMaster())
-        //npcbot - count npcbots as group members (event if not in group)
-        {
-            if (itr->GetSource()->HaveBot() && BotMgr::LimitBots(this))
-            {
-                ++count;
-                BotMap const* botmap = itr->GetSource()->GetBotMgr()->GetBotMap();
-                for (BotMap::const_iterator itr = botmap->begin(); itr != botmap->end(); ++itr)
-                {
-                    Creature* cre = itr->second;
-                    if (!cre || !cre->IsInWorld() || cre->FindMap() != this || cre->IsTempBot())
-                        continue;
-                    ++count;
-                }
-                continue;
-            }
-        //end npcbot
             ++count;
-        //npcbot
-        }
-        //end npcbot
     return count;
 }
 
@@ -3125,7 +3065,7 @@ void InstanceMap::CreateInstanceScript(bool load, std::string data, uint32 compl
 
     bool isOtherAI = false;
 
-    sScriptMgr->OnBeforeCreateInstanceScript(this, instance_data, load, data, completedEncounterMask);
+    sScriptMgr->OnBeforeCreateInstanceScript(this, &instance_data, load, data, completedEncounterMask);
 
     if (instance_data)
         isOtherAI = true;

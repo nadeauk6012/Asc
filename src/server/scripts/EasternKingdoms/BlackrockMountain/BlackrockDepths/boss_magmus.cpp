@@ -21,10 +21,8 @@
 
 enum Spells
 {
-    SPELL_FIERYBURST = 13900,
-    SPELL_WARSTOMP = 24375,
-    SPELL_LAVA_LASH = 60103,
-    SPELL_MOLTEN_ARMOR = 35915
+    SPELL_FIERYBURST                                       = 13900,
+    SPELL_WARSTOMP                                         = 24375
 };
 
 class boss_magmus : public CreatureScript
@@ -51,35 +49,17 @@ public:
         {
             instance->SetData(TYPE_IRON_HALL, IN_PROGRESS);
             _JustEngagedWith();
-            DoCast(me, SPELL_MOLTEN_ARMOR);
             events.ScheduleEvent(SPELL_WARSTOMP, 8s, 12s);
             events.ScheduleEvent(SPELL_FIERYBURST, 4s, 8s);
-            events.ScheduleEvent(SPELL_LAVA_LASH, 6s, 10s); 
-        }
-
-        void JustDied(Unit* /*killer*/) override
-        {
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            if (players.begin() != players.end())
-            {
-                uint32 baseRewardLevel = 1;
-                bool isDungeon = me->GetMap()->IsDungeon();
-
-                Player* player = players.begin()->GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
-                }
-            }
         }
 
         void UpdateAI(uint32 diff) override
         {
+            //Return since we have no target
             if (!UpdateVictim())
             {
                 return;
             }
-
             events.Update(diff);
 
             while (uint32 eventId = events.ExecuteEvent())
@@ -93,10 +73,6 @@ public:
                 case SPELL_FIERYBURST:
                     DoCastVictim(SPELL_FIERYBURST);
                     events.ScheduleEvent(SPELL_FIERYBURST, 4s, 8s);
-                    break;
-                case SPELL_LAVA_LASH:  
-                    DoCastVictim(SPELL_LAVA_LASH);
-                    events.ScheduleEvent(SPELL_LAVA_LASH, 6s, 10s);  
                     break;
                 default:
                     break;
@@ -112,4 +88,3 @@ void AddSC_boss_magmus()
 {
     new boss_magmus();
 }
-

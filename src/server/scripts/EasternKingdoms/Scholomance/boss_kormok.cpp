@@ -126,20 +126,6 @@ struct boss_kormok : public ScriptedAI
     void JustDied(Unit* /*killer*/) override
     {
         Talk(TALK_DEATH);
-        Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        if (!players.IsEmpty())
-        {
-            uint32 baseRewardLevel = 1;
-            bool isDungeon = me->GetMap()->IsDungeon();
-
-            for (auto const& playerPair : players)
-            {
-                if (Player* player = playerPair.GetSource())
-                {
-                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
-                }
-            }
-        }
     }
 
     void UpdateAI(uint32 diff) override
@@ -227,4 +213,3 @@ void AddSC_boss_kormok()
     RegisterSpellScript(spell_kormok_summon_bone_mages);
     RegisterSpellScript(spell_kormok_summon_bone_minions);
 }
-

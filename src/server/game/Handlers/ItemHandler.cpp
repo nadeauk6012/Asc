@@ -25,13 +25,9 @@
 #include "ScriptMgr.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
-#include "UpdateData.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
-
-// npcbot
-#include "botmgr.h"
-//end npcbot
+#include <cmath>
 
 void WorldSession::HandleSplitItemOpcode(WorldPacket& recvData)
 {
@@ -323,7 +319,7 @@ void WorldSession::HandleDestroyItemOpcode(WorldPacket& recvData)
         return;
     }
 
-    if (pItem->GetTemplate()->Flags & ITEM_FLAG_NO_USER_DESTROY)
+    if (pItem->GetTemplate()->HasFlag(ITEM_FLAG_NO_USER_DESTROY))
     {
         _player->SendEquipError(EQUIP_ERR_CANT_DROP_SOULBOUND, nullptr, nullptr);
         return;
@@ -787,7 +783,7 @@ void WorldSession::HandleSellItemOpcode(WorldPacket& recvData)
         // prevent selling item for sellprice when the item is still refundable
         // this probably happens when right clicking a refundable item, the client sends both
         // CMSG_SELL_ITEM and CMSG_REFUND_ITEM (unverified)
-        if (pItem->HasFlag(ITEM_FIELD_FLAGS, ITEM_FIELD_FLAG_REFUNDABLE))
+        if (pItem->IsRefundable())
             return; // Therefore, no feedback to client
 
         // special case at auto sell (sell all)
@@ -1078,7 +1074,7 @@ void WorldSession::SendListInventory(ObjectGuid vendorGuid, uint32 vendorEntry)
     WorldPacket data(SMSG_LIST_INVENTORY, 8 + 1 + itemCount * 8 * 4);
     data << vendorGuid;
 
-    size_t countPos = data.wpos();
+    std::size_t countPos = data.wpos();
     data << uint8(count);
 
     float discountMod = _player->GetReputationPriceDiscount(vendor);
@@ -1089,25 +1085,16 @@ void WorldSession::SendListInventory(ObjectGuid vendorGuid, uint32 vendorEntry)
         {
             if (ItemTemplate const* itemTemplate = sObjectMgr->GetItemTemplate(item->item))
             {
-                // npcbot
-            //    if (_player->HaveBot())
-            //    {
-            //        if (!(itemTemplate->AllowableClass & (_player->GetClassMask() | _player->GetBotMgr()->GetAllNpcBotsClassMask())) &&
-            //            itemTemplate->Bonding == BIND_WHEN_PICKED_UP && !_player->IsGameMaster())
-            //            continue;
-            //    }
-            //    else
-                // end npcbot
-            //    if (!(itemTemplate->AllowableClass & _player->getClassMask()) && itemTemplate->Bonding == BIND_WHEN_PICKED_UP && !_player->IsGameMaster())
-            //    {
-            //        continue;
-            //    }
+                if (!(itemTemplate->AllowableClass & _player->getClassMask()) && itemTemplate->Bonding == BIND_WHEN_PICKED_UP && !_player->IsGameMaster())
+                {
+                    continue;
+                }
                 // Only display items in vendor lists for the team the
                 // player is on. If GM on, display all items.
-            //    if (!_player->IsGameMaster() && ((itemTemplate->Flags2 & ITEM_FLAGS_EXTRA_HORDE_ONLY && _player->GetTeamId() == TEAM_ALLIANCE) || (itemTemplate->Flags2 & ITEM_FLAGS_EXTRA_ALLIANCE_ONLY && _player->GetTeamId() == TEAM_HORDE)))
-            //    {
-            //        continue;
-            //    }
+                if (!_player->IsGameMaster() && ((itemTemplate->HasFlag2(ITEM_FLAG2_FACTION_HORDE) && _player->GetTeamId() == TEAM_ALLIANCE) || (itemTemplate->HasFlag2(ITEM_FLAG2_FACTION_ALLIANCE) && _player->GetTeamId() == TEAM_HORDE)))
+                {
+                    continue;
+                }
 
                 // Items sold out are not displayed in list
                 uint32 leftInStock = !item->maxcount ? 0xFFFFFFFF : vendor->GetVendorItemCurrentCount(item);
@@ -1124,7 +1111,7 @@ void WorldSession::SendListInventory(ObjectGuid vendorGuid, uint32 vendorEntry)
                 }
 
                 // reputation discount
-                int32 price = item->IsGoldRequired(itemTemplate) ? uint32(floor(itemTemplate->BuyPrice * discountMod)) : 0;
+                int32 price = item->IsGoldRequired(itemTemplate) ? uint32(std::floor(itemTemplate->BuyPrice * discountMod)) : 0;
 
                 data << uint32(slot + 1);       // client expects counting to start at 1
                 data << uint32(item->item);
@@ -1265,13 +1252,7 @@ void WorldSession::HandleItemNameQueryOpcode(WorldPacket& recvData)
     {
         std::string Name = pName->name;
         LocaleConstant loc_idx = GetSessionDbLocaleIndex();
-        //npcbot: pointless check, see AccountInfo()
-        /*
-        //end npcbot
         if (loc_idx >= 0)
-        //npcbot
-        */
-        //end npcbot
             if (ItemSetNameLocale const* isnl = sObjectMgr->GetItemSetNameLocale(itemid))
                 ObjectMgr::GetLocaleString(isnl->Name, loc_idx, Name);
 
@@ -1301,7 +1282,7 @@ void WorldSession::HandleWrapItemOpcode(WorldPacket& recvData)
         return;
     }
 
-    if (!(gift->GetTemplate()->Flags & ITEM_FLAG_IS_WRAPPER)) // cheating: non-wrapper wrapper
+    if (!(gift->GetTemplate()->HasFlag(ITEM_FLAG_IS_WRAPPER))) // cheating: non-wrapper wrapper
     {
         _player->SendEquipError(EQUIP_ERR_ITEM_NOT_FOUND, gift, nullptr);
         return;
@@ -1502,7 +1483,7 @@ void WorldSession::HandleSocketOpcode(WorldPacket& recvData)
         ItemTemplate const* iGemProto = Gems[i]->GetTemplate();
 
         // unique item (for new and already placed bit removed enchantments
-        if (iGemProto->Flags & ITEM_FLAG_UNIQUE_EQUIPPABLE)
+        if (iGemProto->HasFlag(ITEM_FLAG_UNIQUE_EQUIPPABLE))
         {
             for (int j = 0; j < MAX_GEM_SOCKETS; ++j)
             {

@@ -24,11 +24,6 @@
 #include "SpellMgr.h"
 #include "TotemPackets.h"
 
-//npcbot
-#include "botmgr.h"
-#include "ObjectAccessor.h"
-//end npcbot
-
 Totem::Totem(SummonPropertiesEntry const* properties, ObjectGuid owner) : Minion(properties, owner, false)
 {
     m_unitTypeMask |= UNIT_MASK_TOTEM;
@@ -39,20 +34,6 @@ Totem::Totem(SummonPropertiesEntry const* properties, ObjectGuid owner) : Minion
 void Totem::Update(uint32 time)
 {
     Unit* owner = GetOwner();
-    //npcbot: do not despawn bot totem if master is dead
-    Creature const* botOwner = (owner && owner->IsPlayer() && owner->ToPlayer()->HaveBot()) ?
-       owner->ToPlayer()->GetBotMgr()->GetBot(GetCreatorGUID()) : nullptr;
-
-    if (botOwner)
-    {
-        if (!botOwner->IsAlive() || !IsAlive() || m_duration <= time)
-        {
-            UnSummon();
-            return;
-        }
-    }
-    else
-    //end npcbot
     if (!owner || !owner->IsAlive() || !IsAlive() || m_duration <= time)
     {
         UnSummon();                                         // remove self
@@ -70,7 +51,7 @@ void Totem::InitStats(uint32 duration)
     if (Unit* owner = ObjectAccessor::GetUnit(*this, m_owner))
     {
         uint32 slot = m_Properties->Slot;
-        if (owner->GetTypeId() == TYPEID_PLAYER && slot >= SUMMON_SLOT_TOTEM && slot < MAX_TOTEM_SLOT)
+        if (owner->IsPlayer() && slot >= SUMMON_SLOT_TOTEM && slot < MAX_TOTEM_SLOT)
         {
             WorldPackets::Totem::TotemCreated data;
             data.Totem = GetGUID();
@@ -187,23 +168,18 @@ void Totem::UnSummon(uint32 msTime)
         }
     }
 
-    //npcbot: send SummonedCreatureDespawn()
-    if (Unit* creator = GetCreator())
-        if (creator->IsNPCBot())
-            creator->ToCreature()->OnBotDespawn(this);
-    //end npcbot
-
     AddObjectToRemoveList();
 }
 
 bool Totem::IsImmunedToSpellEffect(SpellInfo const* spellInfo, uint32 index) const
 {
-    // xinef: immune to all positive spells, except of stoneclaw totem absorb and sentry totem bind sight
+    // xinef: immune to all positive spells, except of stoneclaw totem absorb, sentry totem bind sight and intervene
     // totems positive spells have unit_caster target
     if (spellInfo->Effects[index].Effect != SPELL_EFFECT_DUMMY &&
             spellInfo->Effects[index].Effect != SPELL_EFFECT_SCRIPT_EFFECT &&
             spellInfo->IsPositive() && spellInfo->Effects[index].TargetA.GetTarget() != TARGET_UNIT_CASTER &&
-            spellInfo->Effects[index].TargetA.GetCheckType() != TARGET_CHECK_ENTRY && spellInfo->Id != 55277 && spellInfo->Id != 6277)
+            spellInfo->Effects[index].TargetA.GetCheckType() != TARGET_CHECK_ENTRY &&
+            spellInfo->Id != SPELL_STONECLAW && spellInfo->Id != SPELL_BIND_SIGHT && spellInfo->Id != SPELL_INTERVENE)
         return true;
 
     // Cyclone shouldn't be casted on totems

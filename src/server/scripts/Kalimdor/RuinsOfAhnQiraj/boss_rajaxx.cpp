@@ -59,17 +59,7 @@ struct boss_rajaxx : public BossAI
     {
         Talk(SAY_DEATH);
         _JustDied();
-        DoCastSelf(875167, true);
-        Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        for (auto const& playerPair : players)
-        {
-            Player* player = playerPair.GetSource();
-            if (player)
-            {
-                DistributeChallengeRewards(player, me, 10, false);
-            }
-        }
-        
+
         if (Creature* andorov = instance->instance->GetCreature(instance->GetGuidData(DATA_ANDOROV)))
         {
             andorov->SetNpcFlag(UNIT_NPC_FLAG_GOSSIP | UNIT_NPC_FLAG_VENDOR);
@@ -207,9 +197,9 @@ struct npc_general_andorov : public npc_escortAI
         {
             if (Creature* kaldoreielitist = me->SummonCreature(NPC_KALDOREI_ELITE, *me))
             {
-            //    kaldoreielitist->SetImmuneToNPC(true);
-            //    kaldoreielitist->SetUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
-            //    kaldoreielitist->SetReactState(REACT_PASSIVE);
+                kaldoreielitist->SetImmuneToNPC(true);
+                kaldoreielitist->SetUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
+                kaldoreielitist->SetReactState(REACT_PASSIVE);
                 CAST_AI(SmartAI, kaldoreielitist->AI())->SetFollow(me, 2.5f, 0.f + i * (M_PI / 2));
             }
         }
@@ -392,4 +382,3 @@ void AddSC_boss_rajaxx()
     RegisterSpellScript(spell_rajaxx_thundercrash);
     RegisterRuinsOfAhnQirajCreatureAI(npc_general_andorov);
 }
-

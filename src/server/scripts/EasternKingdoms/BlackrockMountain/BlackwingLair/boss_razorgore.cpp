@@ -47,6 +47,7 @@ enum Spells
 
     SPELL_EXPLODE_ORB           = 20037,
     SPELL_EXPLOSION             = 20038, // Instakill everything.
+
     SPELL_WARMING_FLAMES        = 23040,
 };
 
@@ -89,19 +90,9 @@ public:
 
         void JustDied(Unit* /*killer*/) override
         {
-            DoCastSelf(875167, true);
             if (secondPhase)
             {
                 _JustDied();
-                Map::PlayerList const& players = me->GetMap()->GetPlayers();
-                for (auto const& playerPair : players)
-                {
-                    Player* player = playerPair.GetSource();
-                    if (player)
-                    {
-                        DistributeChallengeRewards(player, me, 1, false);
-                    }
-                }
             }
             else
             {
@@ -119,13 +110,11 @@ public:
 
         bool CanAIAttack(Unit const* target) const override
         {
-            // In the first phase, do not attack non-player units (except NPC bots)
-            if (!secondPhase && target->GetTypeId() == TYPEID_UNIT && !target->ToCreature()->IsNPCBot())
+            if (target->IsCreature() && !secondPhase)
             {
                 return false;
             }
 
-            // Check if the target is affected by SPELL_CONFLAGRATION
             if (me->GetThreatMgr().GetThreatListSize() > 1)
             {
                 ThreatContainer::StorageType::const_iterator lastRef = me->GetThreatMgr().GetOnlineContainer().GetThreatList().end();
@@ -139,14 +128,8 @@ public:
                 }
             }
 
-            // Consider stunned or feared targets (players or NPC bots) as valid in both phases
-            if (target->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED) || target->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING))
-                return true;
-
-            // Default behavior for both phases
             return true;
         }
-
 
         void JustEngagedWith(Unit* /*who*/) override
         {
@@ -158,10 +141,6 @@ public:
             events.ScheduleEvent(EVENT_CONFLAGRATION, 12s);
 
             instance->SetData(DATA_EGG_EVENT, IN_PROGRESS);
-            if (Creature* target = GetClosestCreatureWithEntry(me, 90010, 120.0f))
-            {
-                me->CastSpell(target, 5, false);
-            }
         }
 
         void DoChangePhase()
@@ -169,7 +148,6 @@ public:
             secondPhase = true;
             _charmerGUID.Clear();
             me->RemoveAllAuras();
-            me->SetFullHealth();
 
             DoCastSelf(SPELL_WARMING_FLAMES, true);
 
@@ -257,11 +235,6 @@ public:
 
         void UpdateAI(uint32 diff) override
         {
-            if (me->HasAura(800139))
-            {
-                DoCast(me, 17683, true);
-            }
-            
             if (!UpdateVictim())
                 return;
 
@@ -330,43 +303,32 @@ public:
     }
 };
 
-class spell_egg_event : public SpellScriptLoader
+class spell_egg_event : public SpellScript
 {
-public:
-    spell_egg_event() : SpellScriptLoader("spell_egg_event") { }
+    PrepareSpellScript(spell_egg_event);
 
-    class spell_egg_eventSpellScript : public SpellScript
+    void HandleOnHit()
     {
-        PrepareSpellScript(spell_egg_eventSpellScript);
-
-        void HandleOnHit()
+        if (InstanceScript* instance = GetCaster()->GetInstanceScript())
         {
-            if (InstanceScript* instance = GetCaster()->GetInstanceScript())
-            {
-                instance->SetData(DATA_EGG_EVENT, SPECIAL);
-            }
-
-            if (Creature* razorgore = GetCaster()->ToCreature())
-            {
-                if (GameObject* egg = GetHitGObj())
-                {
-                    razorgore->AI()->DoAction(TALK_EGG_BROKEN_RAND);
-                    egg->SetLootState(GO_READY);
-                    egg->UseDoorOrButton(10000);
-                    egg->SetRespawnTime(WEEK);
-                }
-            }
+            instance->SetData(DATA_EGG_EVENT, SPECIAL);
         }
 
-        void Register() override
+        if (Creature* razorgore = GetCaster()->ToCreature())
         {
-            OnHit += SpellHitFn(spell_egg_eventSpellScript::HandleOnHit);
+            if (GameObject* egg = GetHitGObj())
+            {
+                razorgore->AI()->DoAction(TALK_EGG_BROKEN_RAND);
+                egg->SetLootState(GO_READY);
+                egg->UseDoorOrButton(10000);
+                egg->SetRespawnTime(WEEK);
+            }
         }
-    };
+    }
 
-    SpellScript* GetSpellScript() const override
+    void Register() override
     {
-        return new spell_egg_eventSpellScript();
+        OnHit += SpellHitFn(spell_egg_event::HandleOnHit);
     }
 };
 
@@ -374,6 +336,5 @@ void AddSC_boss_razorgore()
 {
     new boss_razorgore();
     new go_orb_of_domination();
-    new spell_egg_event();
+    RegisterSpellScript(spell_egg_event);
 }
-

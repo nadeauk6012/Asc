@@ -231,7 +231,7 @@ public:
             }
             if (GameObject* go = me->GetMap()->GetGameObject(pInstance->GetGuidData(DATA_KELTHUZAD_GATE)))
             {
-                if(!_justSpawned) // Don't open the door if we just spawned and are still doing the conversation
+                if (!_justSpawned) // Don't open the door if we just spawned and are still doing the conversation
                 {
                     go->SetGoState(GO_STATE_ACTIVE);
                 }
@@ -263,7 +263,7 @@ public:
 
         void KilledUnit(Unit* who) override
         {
-            if (who->GetTypeId() != TYPEID_PLAYER)
+            if (!who->IsPlayer())
                 return;
 
             Talk(SAY_SLAY);
@@ -293,7 +293,7 @@ public:
 
         void MoveInLineOfSight(Unit* who) override
         {
-            if (!me->IsInCombat() && who->GetTypeId() == TYPEID_PLAYER && who->IsAlive() && me->GetDistance(who) <= 50.0f)
+            if (!me->IsInCombat() && who->IsPlayer() && who->IsAlive() && me->GetDistance(who) <= 50.0f)
                 AttackStart(who);
         }
 
@@ -310,7 +310,7 @@ public:
             events.ScheduleEvent(EVENT_SUMMON_SOLDIER, 6400ms);
             events.ScheduleEvent(EVENT_SUMMON_UNSTOPPABLE_ABOMINATION, 10s);
             events.ScheduleEvent(EVENT_SUMMON_SOUL_WEAVER, 12s);
-            events.ScheduleEvent(EVENT_PHASE_2, 180s);
+            events.ScheduleEvent(EVENT_PHASE_2, 228s);
             events.ScheduleEvent(EVENT_ENRAGE, 15min);
             if (pInstance)
             {
@@ -413,11 +413,7 @@ public:
                 case EVENT_SHADOW_FISSURE:
                     if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, true))
                     {
-                        // Check if the target has Frost Blast active on them
-                        if (!target->HasAura(SPELL_FROST_BLAST))
-                        {
-                            me->CastSpell(target, SPELL_SHADOW_FISURE, false);
-                        }
+                        me->CastSpell(target, SPELL_SHADOW_FISURE, false);
                     }
                     events.Repeat(25s);
                     break;
@@ -446,7 +442,7 @@ public:
                         ThreatContainer::StorageType const& threatList = me->GetThreatMgr().GetThreatList();
                         for (auto itr : threatList)
                         {
-                            if (itr->getTarget()->GetTypeId() == TYPEID_PLAYER
+                            if (itr->getTarget()->IsPlayer()
                                     && itr->getTarget()->getPowerType() == POWER_MANA
                                     && itr->getTarget()->GetPower(POWER_MANA))
                                     {
@@ -569,7 +565,7 @@ public:
 
         void MoveInLineOfSight(Unit* who) override
         {
-            if (who->GetTypeId() != TYPEID_PLAYER && !who->IsPet())
+            if (!who->IsPlayer() && !who->IsPet())
                 return;
 
             ScriptedAI::MoveInLineOfSight(who);
@@ -622,7 +618,7 @@ public:
 
         void KilledUnit(Unit* who) override
         {
-            if (who->GetTypeId() == TYPEID_PLAYER && me->GetInstanceScript())
+            if (who->IsPlayer() && me->GetInstanceScript())
             {
                 me->GetInstanceScript()->SetData(DATA_IMMORTAL_FAIL, 0);
             }
@@ -738,4 +734,3 @@ void AddSC_boss_kelthuzad()
     RegisterSpellScript(spell_kelthuzad_frost_blast);
     RegisterSpellScript(spell_kelthuzad_detonate_mana_aura);
 }
-

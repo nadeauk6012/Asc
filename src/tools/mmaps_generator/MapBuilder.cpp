@@ -31,12 +31,12 @@
 namespace MMAP
 {
     TileBuilder::TileBuilder(MapBuilder* mapBuilder, bool skipLiquid, bool bigBaseUnit, bool debugOutput) :
-        m_bigBaseUnit(bigBaseUnit),
-        m_debugOutput(debugOutput),
-        m_mapBuilder(mapBuilder),
-        m_terrainBuilder(nullptr),
-        m_workerThread(&TileBuilder::WorkerThread, this),
-        m_rcContext(nullptr)
+            m_bigBaseUnit(bigBaseUnit),
+            m_debugOutput(debugOutput),
+            m_mapBuilder(mapBuilder),
+            m_terrainBuilder(nullptr),
+            m_workerThread(&TileBuilder::WorkerThread, this),
+            m_rcContext(nullptr)
     {
         m_terrainBuilder = new TerrainBuilder(skipLiquid);
         m_rcContext = new rcContext(false);
@@ -57,23 +57,23 @@ namespace MMAP
     }
 
     MapBuilder::MapBuilder(float maxWalkableAngle, bool skipLiquid,
-        bool skipContinents, bool skipJunkMaps, bool skipBattlegrounds,
-        bool debugOutput, bool bigBaseUnit, int mapid, const char* offMeshFilePath, unsigned int threads) :
+                           bool skipContinents, bool skipJunkMaps, bool skipBattlegrounds,
+                           bool debugOutput, bool bigBaseUnit, int mapid, const char* offMeshFilePath, unsigned int threads) :
 
-        m_debugOutput(debugOutput),
-        m_offMeshFilePath(offMeshFilePath),
-        m_threads(threads),
-        m_skipContinents(skipContinents),
-        m_skipJunkMaps(skipJunkMaps),
-        m_skipBattlegrounds(skipBattlegrounds),
-        m_skipLiquid(skipLiquid),
-        m_maxWalkableAngle(maxWalkableAngle),
-        m_bigBaseUnit(bigBaseUnit),
-        m_mapid(mapid),
-        m_totalTiles(0u),
+        m_debugOutput        (debugOutput),
+        m_offMeshFilePath    (offMeshFilePath),
+        m_threads            (threads),
+        m_skipContinents     (skipContinents),
+        m_skipJunkMaps       (skipJunkMaps),
+        m_skipBattlegrounds  (skipBattlegrounds),
+        m_skipLiquid         (skipLiquid),
+        m_maxWalkableAngle   (maxWalkableAngle),
+        m_bigBaseUnit        (bigBaseUnit),
+        m_mapid              (mapid),
+        m_totalTiles         (0u),
         m_totalTilesProcessed(0u),
 
-        _cancelationToken(false)
+        _cancelationToken    (false)
     {
         m_terrainBuilder = new TerrainBuilder(skipLiquid);
 
@@ -88,7 +88,7 @@ namespace MMAP
     /**************************************************************************/
     MapBuilder::~MapBuilder()
     {
-        for (auto& m_tile : m_tiles)
+        for (auto & m_tile : m_tiles)
         {
             m_tile.m_tiles->clear();
             delete m_tile.m_tiles;
@@ -107,24 +107,24 @@ namespace MMAP
 
         printf("Discovering maps... ");
         getDirContents(files, "maps");
-        for (auto& file : files)
+        for (auto & file : files)
         {
             mapID = uint32(atoi(file.substr(0, file.size() - 8).c_str()));
             if (std::find(m_tiles.begin(), m_tiles.end(), mapID) == m_tiles.end())
             {
-                m_tiles.emplace_back(MapTiles(mapID, new std::set<uint32>));
+                m_tiles.emplace_back(mapID, new std::set<uint32>);
                 count++;
             }
         }
 
         files.clear();
         getDirContents(files, "vmaps", "*.vmtree");
-        for (auto& file : files)
+        for (auto & file : files)
         {
             mapID = uint32(atoi(file.substr(0, file.size() - 7).c_str()));
             if (std::find(m_tiles.begin(), m_tiles.end(), mapID) == m_tiles.end())
             {
-                m_tiles.emplace_back(MapTiles(mapID, new std::set<uint32>));
+                m_tiles.emplace_back(mapID, new std::set<uint32>);
                 count++;
             }
         }
@@ -132,7 +132,7 @@ namespace MMAP
 
         count = 0;
         printf("Discovering tiles... ");
-        for (auto& m_tile : m_tiles)
+        for (auto & m_tile : m_tiles)
         {
             std::set<uint32>* tiles = m_tile.m_tiles;
             mapID = m_tile.m_mapId;
@@ -140,7 +140,7 @@ namespace MMAP
             sprintf(filter, "%03u*.vmtile", mapID);
             files.clear();
             getDirContents(files, "vmaps", filter);
-            for (auto& file : files)
+            for (auto & file : files)
             {
                 fsize = file.size();
 
@@ -155,7 +155,7 @@ namespace MMAP
             sprintf(filter, "%03u*", mapID);
             files.clear();
             getDirContents(files, "maps", filter);
-            for (auto& file : files)
+            for (auto & file : files)
             {
                 fsize = file.size();
 
@@ -184,7 +184,7 @@ namespace MMAP
         printf("found %u.\n\n", count);
 
         // Calculate tiles to process in total
-        for (auto& m_tile : m_tiles)
+        for (auto & m_tile : m_tiles)
         {
             if (!shouldSkipMap(m_tile.m_mapId))
                 m_totalTiles += m_tile.m_tiles->size();
@@ -199,7 +199,7 @@ namespace MMAP
             return (*itr).m_tiles;
 
         std::set<uint32>* tiles = new std::set<uint32>();
-        m_tiles.emplace_back(MapTiles(mapID, tiles));
+        m_tiles.emplace_back(mapID, tiles);
         return tiles;
     }
 
@@ -588,8 +588,8 @@ namespace MMAP
 
     /**************************************************************************/
     void TileBuilder::buildMoveMapTile(uint32 mapID, uint32 tileX, uint32 tileY,
-        MeshData& meshData, float bmin[3], float bmax[3],
-        dtNavMesh* navMesh)
+                                      MeshData& meshData, float bmin[3], float bmax[3],
+                                      dtNavMesh* navMesh)
     {
         // console output
         char tileString[20];
@@ -626,8 +626,8 @@ namespace MMAP
         tileCfg.height = config.tileSize + config.borderSize * 2;
 
         // merge per tile poly and detail meshes
-        rcPolyMesh** pmmerge = new rcPolyMesh * [TILES_PER_MAP * TILES_PER_MAP];
-        rcPolyMeshDetail** dmmerge = new rcPolyMeshDetail * [TILES_PER_MAP * TILES_PER_MAP];
+        rcPolyMesh** pmmerge = new rcPolyMesh*[TILES_PER_MAP * TILES_PER_MAP];
+        rcPolyMeshDetail** dmmerge = new rcPolyMeshDetail*[TILES_PER_MAP * TILES_PER_MAP];
         int nmerge = 0;
         // build all tiles
         for (int y = 0; y < TILES_PER_MAP; ++y)
@@ -937,36 +937,36 @@ namespace MMAP
         if (m_skipJunkMaps)
             switch (mapID)
             {
-            case 13:    // test.wdt
-            case 25:    // ScottTest.wdt
-            case 29:    // Test.wdt
-            case 42:    // Colin.wdt
-            //case 169:   // EmeraldDream.wdt (unused, and very large)
-            case 451:   // development.wdt
-            case 573:   // ExteriorTest.wdt
-            case 597:   // CraigTest.wdt
-            case 605:   // development_nonweighted.wdt
-            case 606:   // QA_DVD.wdt
-                return true;
-            default:
-                if (isTransportMap(mapID))
+                case 13:    // test.wdt
+                case 25:    // ScottTest.wdt
+                case 29:    // Test.wdt
+                case 42:    // Colin.wdt
+                case 169:   // EmeraldDream.wdt (unused, and very large)
+                case 451:   // development.wdt
+                case 573:   // ExteriorTest.wdt
+                case 597:   // CraigTest.wdt
+                case 605:   // development_nonweighted.wdt
+                case 606:   // QA_DVD.wdt
                     return true;
-                break;
+                default:
+                    if (isTransportMap(mapID))
+                        return true;
+                    break;
             }
 
         if (m_skipBattlegrounds)
             switch (mapID)
             {
-            case 30:    // AV
-            case 37:    // ?
-            case 489:   // WSG
-            case 529:   // AB
-            case 566:   // EotS
-            case 607:   // SotA
-            case 628:   // IoC
-                return true;
-            default:
-                break;
+                case 30:    // AV
+                case 37:    // ?
+                case 489:   // WSG
+                case 529:   // AB
+                case 566:   // EotS
+                case 607:   // SotA
+                case 628:   // IoC
+                    return true;
+                default:
+                    break;
             }
 
         return false;
@@ -978,37 +978,37 @@ namespace MMAP
         switch (mapID)
         {
             // transport maps
-        case 582:
-        case 584:
-        case 586:
-        case 587:
-        case 588:
-        case 589:
-        case 590:
-        case 591:
-        case 592:
-        case 593:
-        case 594:
-        case 596:
-        case 610:
-        case 612:
-        case 613:
-        case 614:
-        case 620:
-        case 621:
-        case 622:
-        case 623:
-        case 641:
-        case 642:
-        case 647:
-        case 672:
-        case 673:
-        case 712:
-        case 713:
-        case 718:
-            return true;
-        default:
-            return false;
+            case 582:
+            case 584:
+            case 586:
+            case 587:
+            case 588:
+            case 589:
+            case 590:
+            case 591:
+            case 592:
+            case 593:
+            case 594:
+            case 596:
+            case 610:
+            case 612:
+            case 613:
+            case 614:
+            case 620:
+            case 621:
+            case 622:
+            case 623:
+            case 641:
+            case 642:
+            case 647:
+            case 672:
+            case 673:
+            case 712:
+            case 713:
+            case 718:
+                return true;
+            default:
+                return false;
         }
     }
 
@@ -1016,14 +1016,13 @@ namespace MMAP
     {
         switch (mapID)
         {
-        case 0:
-        case 1:
-        case 530:
-        case 571:
-        case 870:
-            return true;
-        default:
-            return false;
+            case 0:
+            case 1:
+            case 530:
+            case 571:
+                return true;
+            default:
+                return false;
         }
     }
 
@@ -1051,7 +1050,7 @@ namespace MMAP
         return true;
     }
 
-    rcConfig MapBuilder::GetMapSpecificConfig(uint32 mapID, float bmin[3], float bmax[3], const TileConfig& tileConfig) const
+    rcConfig MapBuilder::GetMapSpecificConfig(uint32 mapID, float bmin[3], float bmax[3], const TileConfig &tileConfig) const
     {
         rcConfig config;
         memset(&config, 0, sizeof(rcConfig));
@@ -1080,17 +1079,17 @@ namespace MMAP
         switch (mapID)
         {
             // Blade's Edge Arena
-        case 562:
-            // This allows to walk on the ropes to the pillars
-            config.walkableRadius = 0;
-            break;
+            case 562:
+                // This allows to walk on the ropes to the pillars
+                config.walkableRadius = 0;
+                break;
             // Blackfathom Deeps
-        case 48:
-            // Reduce the chance to have underground levels
-            config.ch *= 2;
-            break;
-        default:
-            break;
+            case 48:
+                // Reduce the chance to have underground levels
+                config.ch *= 2;
+                break;
+            default:
+                break;
         }
 
         return config;

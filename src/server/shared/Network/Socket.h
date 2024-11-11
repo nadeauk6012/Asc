@@ -21,8 +21,8 @@
 #include "Log.h"
 #include "MessageBuffer.h"
 #include <atomic>
-#include <boost/asio/ip/tcp.hpp>
 #include <boost/asio.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <functional>
 #include <memory>
 #include <queue>
@@ -125,7 +125,7 @@ public:
             std::bind(&Socket<T>::ProxyReadHeaderHandler, this->shared_from_this(), std::placeholders::_1, std::placeholders::_2));
     }
 
-    void AsyncReadWithCallback(void (T::* callback)(boost::system::error_code, std::size_t))
+    void AsyncReadWithCallback(void (T::*callback)(boost::system::error_code, std::size_t))
     {
         if (!IsOpen())
         {
@@ -176,7 +176,7 @@ protected:
     virtual void OnClose() { }
     virtual void ReadHandler() = 0;
 
-    [[nodiscard]] bool AsyncProcessQueue()
+    bool AsyncProcessQueue()
     {
         if (_isWritingAsync)
             return false;
@@ -205,7 +205,7 @@ protected:
     }
 
 private:
-    void ReadHandlerInternal(boost::system::error_code error, size_t transferredBytes)
+    void ReadHandlerInternal(boost::system::error_code error, std::size_t transferredBytes)
     {
         if (error)
         {
@@ -219,7 +219,7 @@ private:
 
     // ProxyReadHeaderHandler reads Proxy Protocol v2 header (v1 is not supported).
     // See https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt (2.2. Binary header format (version 2)) for more details.
-    void ProxyReadHeaderHandler(boost::system::error_code error, size_t transferredBytes)
+    void ProxyReadHeaderHandler(boost::system::error_code error, std::size_t transferredBytes)
     {
         if (error)
         {
@@ -241,7 +241,7 @@ private:
         uint8* readPointer = packet.GetReadPointer();
 
         const uint8 signatureSize = 12;
-        const uint8 expectedSignature[signatureSize] = { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A };
+        const uint8 expectedSignature[signatureSize] = {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A};
         if (memcmp(packet.GetReadPointer(), expectedSignature, signatureSize) != 0)
         {
             _proxyHeaderReadingState = PROXY_HEADER_READING_STATE_FAILED;
@@ -261,7 +261,7 @@ private:
 
         const uint8 addressFamily = readPointer[13];
         const uint16 len = (readPointer[14] << 8) | readPointer[15];
-        if (len + 16 > packet.GetActiveSize())
+        if (static_cast<size_t>(len+16) > packet.GetActiveSize())
         {
             AsyncReadProxyHeader();
             return;
@@ -270,7 +270,7 @@ private:
         // Connection created by a proxy itself (health checks?), ignore and do nothing.
         if (command == 0)
         {
-            packet.ReadCompleted(len + 16);
+            packet.ReadCompleted(len+16);
             _proxyHeaderReadingState = PROXY_HEADER_READING_STATE_FINISHED;
             return;
         }
@@ -279,53 +279,53 @@ private:
         readPointer += 16; // Skip strait to address.
 
         switch (addressFamily) {
-        case PROXY_HEADER_ADDRESS_FAMILY_AND_PROTOCOL_TCP_V4:
-        {
-            if (remainingLen < 12)
+            case PROXY_HEADER_ADDRESS_FAMILY_AND_PROTOCOL_TCP_V4:
             {
-                AsyncReadProxyHeader();
-                return;
+                if (remainingLen < 12)
+                {
+                    AsyncReadProxyHeader();
+                    return;
+                }
+
+                boost::asio::ip::address_v4::bytes_type b;
+                auto addressSize = sizeof(b);
+
+                std::copy(readPointer, readPointer+addressSize, b.begin());
+                _remoteAddress = boost::asio::ip::address_v4(b);
+
+                readPointer += 2 * addressSize; // Skip server address.
+                _remotePort = (readPointer[0] << 8) | readPointer[1];
+
+                break;
             }
 
-            boost::asio::ip::address_v4::bytes_type b;
-            auto addressSize = sizeof(b);
-
-            std::copy(readPointer, readPointer + addressSize, b.begin());
-            _remoteAddress = boost::asio::ip::address_v4(b);
-
-            readPointer += 2 * addressSize; // Skip server address.
-            _remotePort = (readPointer[0] << 8) | readPointer[1];
-
-            break;
-        }
-
-        case PROXY_HEADER_ADDRESS_FAMILY_AND_PROTOCOL_TCP_V6:
-        {
-            if (remainingLen < 36)
+            case PROXY_HEADER_ADDRESS_FAMILY_AND_PROTOCOL_TCP_V6:
             {
-                AsyncReadProxyHeader();
-                return;
+                if (remainingLen < 36)
+                {
+                    AsyncReadProxyHeader();
+                    return;
+                }
+
+                boost::asio::ip::address_v6::bytes_type b;
+                auto addressSize = sizeof(b);
+
+                std::copy(readPointer, readPointer+addressSize, b.begin());
+                _remoteAddress = boost::asio::ip::address_v6(b);
+
+                readPointer += 2 * addressSize; // Skip server address.
+                _remotePort = (readPointer[0] << 8) | readPointer[1];
+
+                break;
             }
 
-            boost::asio::ip::address_v6::bytes_type b;
-            auto addressSize = sizeof(b);
-
-            std::copy(readPointer, readPointer + addressSize, b.begin());
-            _remoteAddress = boost::asio::ip::address_v6(b);
-
-            readPointer += 2 * addressSize; // Skip server address.
-            _remotePort = (readPointer[0] << 8) | readPointer[1];
-
-            break;
+            default:
+                _proxyHeaderReadingState = PROXY_HEADER_READING_STATE_FAILED;
+                LOG_ERROR("network", "Socket::ProxyReadHeaderHandler: unsupported address family type {}", GetRemoteIpAddress().to_string());
+                return;
         }
 
-        default:
-            _proxyHeaderReadingState = PROXY_HEADER_READING_STATE_FAILED;
-            LOG_ERROR("network", "Socket::ProxyReadHeaderHandler: unsupported address family type {}", GetRemoteIpAddress().to_string());
-            return;
-        }
-
-        packet.ReadCompleted(len + 16);
+        packet.ReadCompleted(len+16);
         _proxyHeaderReadingState = PROXY_HEADER_READING_STATE_FINISHED;
     }
 

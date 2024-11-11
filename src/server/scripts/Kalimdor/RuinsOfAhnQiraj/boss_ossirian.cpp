@@ -19,7 +19,6 @@
 #include "GameObjectAI.h"
 #include "GameObjectScript.h"
 #include "MiscPackets.h"
-#include "Opcodes.h"
 #include "Player.h"
 #include "ScriptedCreature.h"
 #include "SpellInfo.h"
@@ -204,20 +203,6 @@ struct boss_ossirian : public BossAI
             if (GameObject* crystal = GetClosestGameObjectWithEntry(summon, GO_OSSIRIAN_CRYSTAL, 5.0f))
             {
                 crystal->Delete();
-            }
-        }
-    }
-
-    void JustDied(Unit* /*killer*/) override
-    {
-        DoCastSelf(875167, true);
-        Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        for (auto const& playerPair : players)
-        {
-            Player* player = playerPair.GetSource();
-            if (player)
-            {
-                DistributeChallengeRewards(player, me, 10, false);
             }
         }
     }

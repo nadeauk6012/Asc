@@ -17,17 +17,12 @@
 
 #include "ScriptMgr.h"
 #include "AllScriptsObjects.h"
-#include "LFGScripts.h"
 #include "InstanceScript.h"
-#include "ScriptObject.h"
+#include "LFGScripts.h"
 #include "ScriptSystem.h"
 #include "SmartAI.h"
 #include "SpellMgr.h"
 #include "UnitAI.h"
-
-//npcbot
-#include "botmgr.h"
-//end npcbot
 
 namespace
 {
@@ -36,28 +31,9 @@ namespace
     {
         for (auto const& [scriptID, script] : ScriptRegistry<T>::ScriptPointerList)
         {
-            // Null Check
-            if (script == nullptr)
-            {
-                LOG_ERROR("scripts", "Warning: Null script detected for scriptID: %d", scriptID);
-                continue;
-            }
-
-            try
-            {
-                // Logging scriptID and pointer value
-                LOG_DEBUG("scripts", "Deleting script with scriptID: %d, Pointer: %p", scriptID, static_cast<void*>(script));
-
-                // Delete the script
-                delete script;
-            }
-            catch (const std::exception& e)
-            {
-                LOG_ERROR("scripts", "Exception caught during deletion of scriptID: %d, Exception: %s", scriptID, e.what());
-            }
+            delete script;
         }
 
-        // Clear the ScriptPointerList
         ScriptRegistry<T>::ScriptPointerList.clear();
     }
 }
@@ -88,10 +64,6 @@ void ScriptMgr::Initialize()
     LOG_INFO("server.loading", " ");
 
     AddSC_SmartScripts();
-
-    //npcbot: load bot scripts here
-    AddNpcBotScripts();
-    //end npcbot
 
     // LFGScripts
     lfg::AddSC_LFGScripts();
@@ -129,6 +101,7 @@ void ScriptMgr::Initialize()
     ScriptRegistry<UnitScript>::InitEnabledHooksIfNeeded(UNITHOOK_END);
     ScriptRegistry<WorldObjectScript>::InitEnabledHooksIfNeeded(WORLDOBJECTHOOK_END);
     ScriptRegistry<WorldScript>::InitEnabledHooksIfNeeded(WORLDHOOK_END);
+    ScriptRegistry<AllMapScript>::InitEnabledHooksIfNeeded(ALLMAPHOOK_END);
 }
 
 void ScriptMgr::Unload()
@@ -253,7 +226,7 @@ void ScriptMgr::CheckIfScriptsInDatabaseExist()
                 !ScriptRegistry<GroupScript>::GetScriptById(sid) &&
                 !ScriptRegistry<DatabaseScript>::GetScriptById(sid))
                 {
-                //    LOG_ERROR("sql.sql", "Script named '{}' is assigned in the database, but has no code!", scriptName);
+                    LOG_ERROR("sql.sql", "Script named '{}' is assigned in the database, but has no code!", scriptName);
                 }
         }
     }

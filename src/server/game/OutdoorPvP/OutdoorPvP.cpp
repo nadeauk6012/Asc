@@ -299,7 +299,6 @@ void OutdoorPvP::HandlePlayerLeaveZone(Player* player, uint32 /*zone*/)
 
 void OutdoorPvP::HandlePlayerResurrects(Player* /*player*/, uint32 /*zone*/)
 {
-
 }
 
 bool OutdoorPvP::Update(uint32 diff)
@@ -353,23 +352,6 @@ bool OPvPCapturePoint::Update(uint32 diff)
     float factDiff = ((float)_activePlayers[0].size() - (float)_activePlayers[1].size()) * float(diff) / OUTDOORPVP_OBJECTIVE_UPDATE_INTERVAL;
     if (factDiff == 0.f)
         return false;
-
-    //npcbots - count bots as players but 2 times less affect and only if there is a players difference
-    uint32 botsCount[2];
-
-    for (uint8 team = 0; team != 2; ++team)
-    {
-        botsCount[team] = 0;
-
-        for (GuidSet::iterator itr = _activePlayers[team].begin(); itr != _activePlayers[team].end(); ++itr)
-        {
-            if (Player* player = ObjectAccessor::FindPlayer(*itr))
-                botsCount[team] += player->GetNpcBotsCount();
-        }
-    }
-
-    factDiff += 0.5f * ((float)botsCount[0] - (float)botsCount[1]) * diff / OUTDOORPVP_OBJECTIVE_UPDATE_INTERVAL;
-    //end npcbot
 
     TeamId ChallengerId = TEAM_NEUTRAL;
     float maxDiff = _maxSpeed * float(diff);
@@ -530,7 +512,7 @@ void OutdoorPvP::HandleKill(Player* killer, Unit* killed)
 
             // creature kills must be notified, even if not inside objective / not outdoor pvp active
             // player kills only count if active and inside objective
-            if ((groupGuy->IsOutdoorPvPActive() && IsInsideObjective(groupGuy)) || killed->GetTypeId() == TYPEID_UNIT)
+            if ((groupGuy->IsOutdoorPvPActive() && IsInsideObjective(groupGuy)) || killed->IsCreature())
             {
                 HandleKillImpl(groupGuy, killed);
             }
@@ -539,7 +521,7 @@ void OutdoorPvP::HandleKill(Player* killer, Unit* killed)
     else
     {
         // creature kills must be notified, even if not inside objective / not outdoor pvp active
-        if ((killer->IsOutdoorPvPActive() && IsInsideObjective(killer)) || killed->GetTypeId() == TYPEID_UNIT)
+        if ((killer->IsOutdoorPvPActive() && IsInsideObjective(killer)) || killed->IsCreature())
         {
             HandleKillImpl(killer, killed);
         }

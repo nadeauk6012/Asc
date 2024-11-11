@@ -37,7 +37,6 @@ class Unit;
 class WorldObject;
 class WorldPacket;
 class WorldSession;
-class ToCloud9GroupHooks;
 
 struct MapEntry;
 
@@ -168,7 +167,6 @@ public:
 /** todo: uninvite people that not accepted invite **/
 class Group
 {
-    friend class ToCloud9GroupHooks;
 public:
     struct MemberSlot
     {
@@ -195,16 +193,6 @@ public:
     bool   Create(Player* leader);
     bool   LoadGroupFromDB(Field* field);
     void   LoadMemberFromDB(ObjectGuid::LowType guidLow, uint8 memberFlags, uint8 subgroup, uint8 roles);
-    //npcbot
-    bool Create(Creature* leader);
-    bool AddMember(Creature* creature);
-    void LoadCreatureMemberFromDB(uint32 entry, uint8 memberFlags, uint8 subgroup, uint8 roles);
-    void UpdateBotOutOfRange(Creature* creature);
-    void LinkBotMember(GroupBotReference* bRef);
-    void DelinkBotMember(ObjectGuid guid);
-    GroupBotReference* GetFirstBotMember() { return m_botMemberMgr.getFirst(); }
-    GroupBotReference const* GetFirstBotMember() const { return m_botMemberMgr.getFirst(); }
-    //end npcbot
     bool   AddInvite(Player* player);
     void   RemoveInvite(Player* player);
     void   RemoveAllInvites();
@@ -298,7 +286,7 @@ public:
     bool isRollLootActive() const;
     void SendLootStartRoll(uint32 CountDown, uint32 mapid, const Roll& r);
     void SendLootStartRollToPlayer(uint32 countDown, uint32 mapId, Player* p, bool canNeed, Roll const& r);
-    void SendLootRoll(ObjectGuid SourceGuid, ObjectGuid TargetGuid, uint8 RollNumber, uint8 RollType, const Roll& r);
+    void SendLootRoll(ObjectGuid SourceGuid, ObjectGuid TargetGuid, uint8 RollNumber, uint8 RollType, const Roll& r, bool autoPass = false);
     void SendLootRollWon(ObjectGuid SourceGuid, ObjectGuid TargetGuid, uint8 RollNumber, uint8 RollType, const Roll& r);
     void SendLootAllPassed(Roll const& roll);
     void SendLooter(Creature* creature, Player* pLooter);
@@ -334,10 +322,6 @@ public:
 
     DataMap CustomData;
 
-    //npcbots
-    ObjectGuid const* GetTargetIcons() const { return m_targetIcons; }
-    //end npcbots
-
 protected:
     void _homebindIfInstance(Player* player);
     void _cancelHomebindIfInstance(Player* player);
@@ -348,29 +332,24 @@ protected:
     void SubGroupCounterIncrease(uint8 subgroup);
     void SubGroupCounterDecrease(uint8 subgroup);
     void ToggleGroupMemberFlag(member_witerator slot, uint8 flag, bool apply);
-    void AddMemberWithGuid(ObjectGuid guid);
-    void ForcedDisband(bool hideDestroy = false);
 
     MemberSlotList      m_memberSlots;
     GroupRefMgr     m_memberMgr;
-    //npcbot
-    GroupBotRefManager  m_botMemberMgr;
-    //end npcbot
     InvitesList         m_invitees;
     ObjectGuid          m_leaderGuid;
     std::string         m_leaderName;
     GroupType           m_groupType;
     Difficulty          m_dungeonDifficulty;
     Difficulty          m_raidDifficulty;
-    Battlefield* m_bfGroup;
-    Battleground* m_bgGroup;
+    Battlefield*        m_bfGroup;
+    Battleground*       m_bgGroup;
     ObjectGuid          m_targetIcons[TARGETICONCOUNT];
     LootMethod          m_lootMethod;
     ItemQualities       m_lootThreshold;
     ObjectGuid          m_looterGuid;
     ObjectGuid          m_masterLooterGuid;
     Rolls               RollId;
-    uint8* m_subGroupsCounts;
+    uint8*              m_subGroupsCounts;
     ObjectGuid          m_guid;
     uint32              m_counter;                      // used only in SMSG_GROUP_LIST
     uint32              m_maxEnchantingLevel;
@@ -381,4 +360,3 @@ protected:
     DifficultyPreventionChangeType _difficultyChangePreventionType;
 };
 #endif
-

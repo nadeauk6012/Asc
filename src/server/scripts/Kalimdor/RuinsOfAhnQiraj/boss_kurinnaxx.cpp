@@ -25,17 +25,17 @@
 
 enum Spells
 {
-    SPELL_MORTAL_WOUND = 25646,
-    SPELL_SAND_TRAP = 25648,
-    SPELL_ENRAGE = 26527,
-    SPELL_SUMMON_PLAYER = 26446,
-    SPELL_WIDE_SLASH = 25814,
-    SPELL_THRASH = 3391
+    SPELL_MORTAL_WOUND      = 25646,
+    SPELL_SAND_TRAP         = 25648,
+    SPELL_ENRAGE            = 26527,
+    SPELL_SUMMON_PLAYER     = 26446,
+    SPELL_WIDE_SLASH        = 25814,
+    SPELL_THRASH            = 3391
 };
 
 enum Texts
 {
-    SAY_KURINNAXX_DEATH = 5 // Yell by 'Ossirian the Unscarred'
+    SAY_KURINNAXX_DEATH     = 5 // Yell by 'Ossirian the Unscarred'
 };
 
 struct boss_kurinnaxx : public BossAI
@@ -52,32 +52,34 @@ struct boss_kurinnaxx : public BossAI
         BossAI::JustEngagedWith(who);
 
         scheduler.Schedule(8s, 10s, [this](TaskContext context)
+        {
+            DoCastVictim(SPELL_MORTAL_WOUND);
+            context.Repeat(8s, 10s);
+        }).Schedule(5s, 15s, [this](TaskContext context)
+        {
+            if (Unit* target = SelectTarget(SelectTargetMethod::Random, 1, 100.f, true))
             {
-                DoCastVictim(SPELL_MORTAL_WOUND);
-                context.Repeat(8s, 10s);
-            }).Schedule(5s, 15s, [this](TaskContext context)
-                {
-                    CastSpellOnRandomTarget(SPELL_SAND_TRAP, 100.f);
-                    context.Repeat(10s, 21s);
-                }).Schedule(10s, 15s, [this](TaskContext context)
-                    {
-                        DoCastSelf(SPELL_WIDE_SLASH);
-                        context.Repeat(12s, 15s);
-                    }).Schedule(16s, [this](TaskContext context)
-                        {
-                            DoCastSelf(SPELL_THRASH);
-                            context.Repeat(16s);
-                        });
+                target->CastSpell(target, SPELL_SAND_TRAP, true, nullptr, nullptr, me->GetGUID());
+            }
+            context.Repeat(5s, 15s);
+        }).Schedule(10s, 15s, [this](TaskContext context)
+        {
+            DoCastSelf(SPELL_WIDE_SLASH);
+            context.Repeat(12s, 15s);
+        }).Schedule(16s, [this](TaskContext context)
+        {
+            DoCastSelf(SPELL_THRASH);
+            context.Repeat(16s);
+        });
 
-                    ScheduleHealthCheckEvent(30, [&]
-                        {
-                            DoCastSelf(SPELL_ENRAGE);
-                        });
+        ScheduleHealthCheckEvent(30, [&]
+        {
+            DoCastSelf(SPELL_ENRAGE);
+        });
     }
 
     void JustDied(Unit* killer) override
     {
-       
         if (killer)
         {
             killer->GetMap()->LoadGrid(-9502.80f, 2042.65f); // Ossirian grid
@@ -99,34 +101,6 @@ struct boss_kurinnaxx : public BossAI
                 ossirian->AI()->Talk(SAY_KURINNAXX_DEATH);
         }
         BossAI::JustDied(killer);
-        DoCastSelf(875167, true);
-        Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        for (auto const& playerPair : players)
-        {
-            Player* player = playerPair.GetSource();
-            if (player)
-            {
-                DistributeChallengeRewards(player, me, 10, false);
-            }
-        }
-    }
-
-    void CastSpellOnRandomTarget(uint32 spellId, float range)
-    {
-        std::list<Unit*> targets;
-        Acore::AnyUnitInObjectRangeCheck check(me, range);
-        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
-        Cell::VisitAllObjects(me, searcher, range);
-
-        targets.remove_if([this](Unit* unit) -> bool {
-            return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
-            });
-
-        if (!targets.empty())
-        {
-            Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
-            DoCast(target, spellId);
-        }
     }
 };
 
@@ -137,11 +111,11 @@ struct go_sand_trap : public GameObjectAI
     void Reset() override
     {
         _scheduler.Schedule(5s, [this](TaskContext /*context*/)
-            {
-                if (InstanceScript* instance = me->GetInstanceScript())
-                    if (Creature* kurinnaxx = instance->GetCreature(DATA_KURINNAXX))
-                        me->Use(kurinnaxx);
-            });
+        {
+            if (InstanceScript* instance = me->GetInstanceScript())
+                if (Creature* kurinnaxx = instance->GetCreature(DATA_KURINNAXX))
+                    me->Use(kurinnaxx);
+        });
     }
 
     void UpdateAI(uint32 const diff) override

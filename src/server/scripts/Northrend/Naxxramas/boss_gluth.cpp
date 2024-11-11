@@ -24,39 +24,39 @@
 
 enum Spells
 {
-    SPELL_MORTAL_WOUND = 25646,
-    SPELL_ENRAGE_10 = 28371,
-    SPELL_ENRAGE_25 = 54427,
-    SPELL_DECIMATE_10 = 28374,
-    SPELL_DECIMATE_25 = 54426,
-    SPELL_DECIMATE_DAMAGE = 28375,
-    SPELL_BERSERK = 26662,
-    SPELL_INFECTED_WOUND = 29306,
-    SPELL_CHOW_SEARCHER = 28404
+    SPELL_MORTAL_WOUND                  = 25646,
+    SPELL_ENRAGE_10                     = 28371,
+    SPELL_ENRAGE_25                     = 54427,
+    SPELL_DECIMATE_10                   = 28374,
+    SPELL_DECIMATE_25                   = 54426,
+    SPELL_DECIMATE_DAMAGE               = 28375,
+    SPELL_BERSERK                       = 26662,
+    SPELL_INFECTED_WOUND                = 29306,
+    SPELL_CHOW_SEARCHER                 = 28404
 };
 
 enum Events
 {
-    EVENT_MORTAL_WOUND = 1,
-    EVENT_ENRAGE = 2,
-    EVENT_DECIMATE = 3,
-    EVENT_BERSERK = 4,
-    EVENT_SUMMON_ZOMBIE = 5,
-    EVENT_CAN_EAT_ZOMBIE = 6
+    EVENT_MORTAL_WOUND                  = 1,
+    EVENT_ENRAGE                        = 2,
+    EVENT_DECIMATE                      = 3,
+    EVENT_BERSERK                       = 4,
+    EVENT_SUMMON_ZOMBIE                 = 5,
+    EVENT_CAN_EAT_ZOMBIE                = 6
 };
 
 enum Misc
 {
-    NPC_ZOMBIE_CHOW = 16360
+    NPC_ZOMBIE_CHOW                     = 16360
 };
 
 enum Emotes
 {
-    EMOTE_SPOTS_ONE = 0,
-    EMOTE_DECIMATE = 1,
-    EMOTE_ENRAGE = 2,
-    EMOTE_DEVOURS_ALL = 3,
-    EMOTE_BERSERK = 4
+    EMOTE_SPOTS_ONE                     = 0,
+    EMOTE_DECIMATE                      = 1,
+    EMOTE_ENRAGE                        = 2,
+    EMOTE_DEVOURS_ALL                   = 3,
+    EMOTE_BERSERK                       = 4
 };
 
 const Position zombiePos[3] =
@@ -141,13 +141,13 @@ public:
             {
                 me->ModifyHealth(int32(me->GetMaxHealth() * 0.05f));
             }
-            if (who->GetTypeId() == TYPEID_PLAYER && pInstance)
+            if (who->IsPlayer() && pInstance)
             {
                 pInstance->SetData(DATA_IMMORTAL_FAIL, 0);
             }
         }
 
-        void JustDied(Unit* killer) override
+        void JustDied(Unit*  killer) override
         {
             BossAI::JustDied(killer);
             summons.DespawnAll();
@@ -159,7 +159,7 @@ public:
                 return false;
 
             Map::PlayerList const& pList = me->GetMap()->GetPlayers();
-            for (const auto& itr : pList)
+            for (auto const& itr : pList)
             {
                 Player* player = itr.GetSource();
                 if (!player || !player->IsAlive())
@@ -185,53 +185,53 @@ public:
 
             switch (events.ExecuteEvent())
             {
-            case EVENT_BERSERK:
-                me->CastSpell(me, SPELL_BERSERK, true);
-                break;
-            case EVENT_ENRAGE:
-                Talk(EMOTE_ENRAGE);
-                me->CastSpell(me, RAID_MODE(SPELL_ENRAGE_10, SPELL_ENRAGE_25), true);
-                events.Repeat(22s);
-                break;
-            case EVENT_MORTAL_WOUND:
-                me->CastSpell(me->GetVictim(), SPELL_MORTAL_WOUND, false);
-                events.Repeat(10s);
-                break;
-            case EVENT_DECIMATE:
-                Talk(EMOTE_DECIMATE);
-                me->CastSpell(me, RAID_MODE(SPELL_DECIMATE_10, SPELL_DECIMATE_25), false);
-                events.RepeatEvent(RAID_MODE(110000, 90000));
-                break;
-            case EVENT_SUMMON_ZOMBIE:
-            {
-                uint8 rand = urand(0, 2);
-                for (int32 i = 0; i < RAID_MODE(1, 2); ++i)
-                {
-                    // In 10 man raid, normal mode - should spawn only from mid gate
-                    // \1 |0 /2 pos
-                    // In 25 man raid - should spawn from all 3 gates
-                    if (me->GetMap()->GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL)
+                case EVENT_BERSERK:
+                    me->CastSpell(me, SPELL_BERSERK, true);
+                    break;
+                case EVENT_ENRAGE:
+                    Talk(EMOTE_ENRAGE);
+                    me->CastSpell(me, RAID_MODE(SPELL_ENRAGE_10, SPELL_ENRAGE_25), true);
+                    events.Repeat(22s);
+                    break;
+                case EVENT_MORTAL_WOUND:
+                    me->CastSpell(me->GetVictim(), SPELL_MORTAL_WOUND, false);
+                    events.Repeat(10s);
+                    break;
+                case EVENT_DECIMATE:
+                    Talk(EMOTE_DECIMATE);
+                    me->CastSpell(me, RAID_MODE(SPELL_DECIMATE_10, SPELL_DECIMATE_25), false);
+                    events.RepeatEvent(RAID_MODE(110000, 90000));
+                    break;
+                case EVENT_SUMMON_ZOMBIE:
                     {
-                        me->SummonCreature(NPC_ZOMBIE_CHOW, zombiePos[0]);
+                        uint8 rand = urand(0, 2);
+                        for (int32 i = 0; i < RAID_MODE(1, 2); ++i)
+                        {
+                            // In 10 man raid, normal mode - should spawn only from mid gate
+                            // \1 |0 /2 pos
+                            // In 25 man raid - should spawn from all 3 gates
+                            if (me->GetMap()->GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL)
+                            {
+                                me->SummonCreature(NPC_ZOMBIE_CHOW, zombiePos[0]);
+                            }
+                            else
+                            {
+                                me->SummonCreature(NPC_ZOMBIE_CHOW, zombiePos[urand(0, 2)]);
+                            }
+                            (rand == 2 ? rand = 0 : rand++);
+                        }
+                        events.Repeat(10s);
+                        break;
                     }
-                    else
+                case EVENT_CAN_EAT_ZOMBIE:
+                    events.RepeatEvent(1000);
+                    if (me->GetVictim()->GetEntry() == NPC_ZOMBIE_CHOW && me->IsWithinMeleeRange(me->GetVictim()))
                     {
-                        me->SummonCreature(NPC_ZOMBIE_CHOW, zombiePos[urand(0, 2)]);
+                        me->CastCustomSpell(SPELL_CHOW_SEARCHER, SPELLVALUE_RADIUS_MOD, 20000, me, true);
+                        Talk(EMOTE_DEVOURS_ALL);
+                        return; // leave it to skip DoMeleeAttackIfReady
                     }
-                    (rand == 2 ? rand = 0 : rand++);
-                }
-                events.Repeat(10s);
-                break;
-            }
-            case EVENT_CAN_EAT_ZOMBIE:
-                events.RepeatEvent(1000);
-                if (me->GetVictim()->GetEntry() == NPC_ZOMBIE_CHOW && me->IsWithinMeleeRange(me->GetVictim()))
-                {
-                    me->CastCustomSpell(SPELL_CHOW_SEARCHER, SPELLVALUE_RADIUS_MOD, 20000, me, true);
-                    Talk(EMOTE_DEVOURS_ALL);
-                    return; // leave it to skip DoMeleeAttackIfReady
-                }
-                break;
+                    break;
             }
             DoMeleeAttackIfReady();
         }
@@ -276,5 +276,5 @@ class spell_gluth_decimate : public SpellScript
 void AddSC_boss_gluth()
 {
     new boss_gluth();
-    //RegisterSpellScript(spell_gluth_decimate);
+    RegisterSpellScript(spell_gluth_decimate);
 }

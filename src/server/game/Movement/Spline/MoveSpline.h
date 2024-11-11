@@ -25,12 +25,12 @@ namespace Movement
 {
     struct Location : public Vector3
     {
-        Location() = default;
+        Location()  = default;
         Location(float x, float y, float z, float o) : Vector3(x, y, z), orientation(o) {}
         Location(const Vector3& v) : Vector3(v) {}
         Location(const Vector3& v, float o) : Vector3(v), orientation(o) {}
 
-        float orientation{ 0 };
+        float orientation{0};
     };
 
     // MoveSpline represents smooth catmullrom or linear curve and point that moves belong it
@@ -42,11 +42,11 @@ namespace Movement
         typedef Spline<int32> MySpline;
         enum UpdateResult
         {
-            Result_None = 0x01,
-            Result_Arrived = 0x02,
-            Result_NextCycle = 0x04,
-            Result_NextSegment = 0x08,
-            Result_JustArrived = 0x10,
+            Result_None         = 0x01,
+            Result_Arrived      = 0x02,
+            Result_NextCycle    = 0x04,
+            Result_NextSegment  = 0x08,
+            Result_JustArrived  = 0x10,
         };
         friend class PacketBuilder;
     protected:

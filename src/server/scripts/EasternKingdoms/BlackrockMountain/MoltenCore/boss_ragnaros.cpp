@@ -131,7 +131,7 @@ public:
         void Reset() override
         {
             _Reset();
-            me->SetName("Ragnaros");
+
             // Never reset intro events!
             if (_isIntroDone && !(extraEvents.GetPhaseMask() & (1 << (PHASE_INTRO - 1))))
             {
@@ -217,15 +217,6 @@ public:
             _JustDied();
             extraEvents.Reset();
             me->SetFacingTo(DEATH_ORIENTATION);
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            for (auto const& playerPair : players)
-            {
-                Player* player = playerPair.GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, 1, false);
-                }
-            }
         }
 
         void KilledUnit(Unit* victim) override
@@ -573,4 +564,3 @@ void AddSC_boss_ragnaros()
     RegisterSpellScript(spell_ragnaros_lava_burst_randomizer);
     RegisterSpellScript(spell_ragnaros_summon_sons_of_flame);
 }
-

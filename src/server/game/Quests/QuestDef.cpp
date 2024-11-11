@@ -35,7 +35,7 @@ Quest::Quest(Field* questRecord)
     Level = questRecord[2].Get<int16>();
     MinLevel = questRecord[3].Get<uint8>();
     ZoneOrSort = questRecord[4].Get<int16>();
-    Type = questRecord[5].Get<int32>();
+    Type = questRecord[5].Get<uint16>();
     SuggestedPlayers = questRecord[6].Get<uint8>();
     TimeAllowed = questRecord[7].Get<uint32>();
     AllowableRaces = questRecord[8].Get<uint32>();
@@ -187,7 +187,7 @@ void Quest::LoadQuestTemplateAddon(Field* fields)
     RequiredMaxRepValue = fields[14].Get<int32>();
     StartItemCount = fields[15].Get<uint8>();
     RewardMailSenderEntry = fields[16].Get<uint32>();
-    SpecialFlags = fields[17].Get<uint8>();
+    SpecialFlags = fields[17].Get<uint32>();
 
     if ((SpecialFlags & QUEST_SPECIAL_FLAGS_AUTO_ACCEPT) && !sWorld->getBoolConfig(CONFIG_QUEST_IGNORE_AUTO_ACCEPT))
     {

@@ -65,8 +65,7 @@ enum Events
     EVENT_WATCH_PLAYER        = 8,
     EVENT_CHARGE_PLAYER       = 9,
     EVENT_EXECUTE             = 10,
-    EVENT_CLEAVE              = 11,
-    EVENT_CAST_LIGHTNING_AND_THUNDER = 12
+    EVENT_CLEAVE              = 11
 };
 
 enum Action
@@ -173,7 +172,6 @@ public:
             reviveGUID.Clear();
             _useExecute = false;
             _chargeTarget.first.Clear();
-            DoCastSelf(875167, true);
         }
 
         void JustDied(Unit* /*killer*/) override
@@ -185,16 +183,6 @@ public:
 
             instance->SetBossState(DATA_MANDOKIR, DONE);
             instance->SaveToDB();
-            DoCastSelf(875167, true);
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            for (auto const& playerPair : players)
-            {
-                Player* player = playerPair.GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, 1, false);
-                }
-            }
         }
 
         void JustEngagedWith(Unit* /*who*/) override
@@ -204,9 +192,8 @@ public:
             events.ScheduleEvent(EVENT_MORTAL_STRIKE, 14s, 28s);
             events.ScheduleEvent(EVENT_WHIRLWIND, 24s, 30s);
             events.ScheduleEvent(EVENT_CHECK_OHGAN, 1s);
-            events.ScheduleEvent(EVENT_WATCH_PLAYER, 24s, 24s);
+            events.ScheduleEvent(EVENT_WATCH_PLAYER, 12s, 24s);
             events.ScheduleEvent(EVENT_CHARGE_PLAYER, 30s, 40s);
-            events.ScheduleEvent(EVENT_CAST_LIGHTNING_AND_THUNDER, 20s, 40s);
             events.ScheduleEvent(EVENT_CLEAVE, 1s);
             me->SetHomePosition(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation());
             Talk(SAY_AGGRO);
@@ -222,7 +209,7 @@ public:
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() != TYPEID_PLAYER)
+            if (!victim->IsPlayer())
                 return;
 
             reviveGUID = victim->GetGUID();
@@ -449,23 +436,20 @@ public:
                         }
                         break;
                     case EVENT_WATCH_PLAYER:
-                        if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100.0f, true))
+                        if (Unit* player = SelectTarget(SelectTargetMethod::Random, 0, 100, true))
                         {
-                            DoCast(target, SPELL_WATCH); 
-
-                            std::string warnMsg = "Mandokir's gaze falls upon " + target->GetName() + "! Run or face your doom!";
-                            me->TextEmote(warnMsg.c_str(), nullptr, true);
-
-                            _chargeTarget = std::make_pair(target->GetGUID(), 0.f);
+                            DoCast(player, SPELL_WATCH);
+                            Talk(SAY_WATCH, player);
+                            _chargeTarget = std::make_pair(player->GetGUID(), 0.f);
                         }
-                        events.ScheduleEvent(EVENT_WATCH_PLAYER, 24s, 24s);
+                        events.ScheduleEvent(EVENT_WATCH_PLAYER, 12s, 24s);
                         break;
                     case EVENT_CHARGE_PLAYER:
                         if (Unit* target = SelectTarget(SelectTargetMethod::MinDistance, 0, [this](Unit const* target)
                             {
                                 if (!me || !target)
                                     return false;
-                                if (target->GetTypeId() != TYPEID_PLAYER || !me->IsWithinLOSInMap(target))
+                                if (!target->IsPlayer() || !me->IsWithinLOSInMap(target))
                                     return false;
                                 return true;
                             }))
@@ -482,10 +466,6 @@ public:
                     case EVENT_EXECUTE:
                         DoCastVictim(SPELL_EXECUTE, true);
                         events.ScheduleEvent(EVENT_EXECUTE, 7s, 14s);
-                        break;
-                    case EVENT_CAST_LIGHTNING_AND_THUNDER:
-                        CastCustomSpellOnRandomTarget(920356, 100.0f, 100); // Spell ID, range, and custom base points
-                        events.ScheduleEvent(EVENT_CAST_LIGHTNING_AND_THUNDER, 20s, 40s);
                         break;
                     case EVENT_CLEAVE:
                         {
@@ -516,24 +496,6 @@ public:
             }
 
             DoMeleeAttackIfReady(false);
-        }
-
-        void CastCustomSpellOnRandomTarget(uint32 spellId, float range, int32 bp0)
-        {
-            std::list<Unit*> targets;
-            Acore::AnyUnitInObjectRangeCheck check(me, range);
-            Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
-            Cell::VisitAllObjects(me, searcher, range);
-
-            targets.remove_if([this](Unit* unit) -> bool {
-                return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
-                });
-
-            if (!targets.empty())
-            {
-                Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
-                me->CastCustomSpell(target, spellId, &bp0, nullptr, nullptr, false, nullptr, nullptr, me->GetGUID());
-            }
         }
 
     private:
@@ -578,7 +540,7 @@ public:
 
         void JustEngagedWith(Unit* who) override
         {
-            if (who->GetTypeId() != TYPEID_PLAYER)
+            if (!who->IsPlayer())
                 return;
 
             _scheduler.Schedule(6s, 12s, [this](TaskContext context)
@@ -595,7 +557,7 @@ public:
 
         void KilledUnit(Unit* victim) override
         {
-            if (victim->GetTypeId() != TYPEID_PLAYER)
+            if (!victim->IsPlayer())
                 return;
 
             reviveGUID = victim->GetGUID();
@@ -748,48 +710,33 @@ private:
     InstanceScript* instance;
 };
 
-class spell_threatening_gaze : public SpellScriptLoader
+class spell_threatening_gaze_aura : public AuraScript
 {
-public:
-    spell_threatening_gaze() : SpellScriptLoader("spell_threatening_gaze") { }
+    PrepareAuraScript(spell_threatening_gaze_aura);
 
-    class spell_threatening_gaze_AuraScript : public AuraScript
+    void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        PrepareAuraScript(spell_threatening_gaze_AuraScript);
-
-        void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+        if (GetTargetApplication()->GetRemoveMode() == AURA_REMOVE_BY_EXPIRE)
         {
-            if (GetTargetApplication()->GetRemoveMode() == AURA_REMOVE_BY_EXPIRE)
+            if (Unit* target = GetTarget())
             {
-                if (Unit* target = GetTarget())
+                if (Unit* caster = GetCaster())
                 {
-                    if (Unit* caster = GetCaster())
+                    if (Creature* cCaster = caster->ToCreature())
                     {
-                        // Ensure the target is within 60 units before setting the charge action
-                        if (caster->GetDistance(target) <= 60.0f)
+                        if (cCaster->IsAIEnabled)
                         {
-                            if (Creature* cCaster = caster->ToCreature())
-                            {
-                                if (cCaster->IsAIEnabled)
-                                {
-                                    cCaster->AI()->SetGUID(target->GetGUID(), ACTION_CHARGE);
-                                }
-                            }
+                            cCaster->AI()->SetGUID(target->GetGUID(), ACTION_CHARGE);
                         }
                     }
                 }
             }
         }
+    }
 
-        void Register() override
-        {
-            OnEffectRemove += AuraEffectRemoveFn(spell_threatening_gaze_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
-        }
-    };
-
-    AuraScript* GetAuraScript() const override
+    void Register() override
     {
-        return new spell_threatening_gaze_AuraScript();
+        OnEffectRemove += AuraEffectRemoveFn(spell_threatening_gaze_aura::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -840,8 +787,7 @@ void AddSC_boss_mandokir()
     new npc_ohgan();
     RegisterZulGurubCreatureAI(npc_chained_spirit);
     RegisterZulGurubCreatureAI(npc_vilebranch_speaker);
-    new spell_threatening_gaze();
+    RegisterSpellScript(spell_threatening_gaze_aura);
     RegisterSpellScript(spell_mandokir_charge);
     RegisterSpellScript(spell_threatening_gaze_charge);
 }
-

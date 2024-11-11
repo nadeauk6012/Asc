@@ -24,10 +24,6 @@
 #include "Player.h"
 #include "ScriptMgr.h"
 
-//npcbot
-#include "botmgr.h"
-//end npcbot
-
 TempSummon::TempSummon(SummonPropertiesEntry const* properties, ObjectGuid owner, bool isWorldObject) :
     Creature(isWorldObject), m_Properties(properties), m_type(TEMPSUMMON_MANUAL_DESPAWN),
     m_timer(0), m_lifetime(0), _visibleBySummonerOnly(false)
@@ -222,23 +218,17 @@ void TempSummon::InitStats(uint32 duration)
         {
             SetFaction(owner->GetFaction());
             SetLevel(owner->GetLevel());
-            if (owner->GetTypeId() == TYPEID_PLAYER)
+            if (owner->IsPlayer())
                 m_ControlledByPlayer = true;
         }
 
-        if (owner->GetTypeId() == TYPEID_PLAYER)
+        if (owner->IsPlayer())
             m_CreatedByPlayer = true;
     }
 
     if (!m_Properties)
         return;
 
-    //npcbot: skip deleting/reassigning player totems
-    //normally no creatorGUID is assigned at this point, perform full check anyway for compatibilty reasons
-    if (!(m_Properties->Slot && m_Properties->Slot >= SUMMON_SLOT_TOTEM_FIRE && m_Properties->Slot < MAX_TOTEM_SLOT &&
-        GetCreatorGUID() && GetCreatorGUID().IsCreature() && owner && owner->GetTypeId() == TYPEID_PLAYER &&
-        owner->ToPlayer()->HaveBot() && owner->ToPlayer()->GetBotMgr()->GetBot(GetCreatorGUID())))
-    //end npcbot
     if (owner)
     {
         if (uint32 slot = m_Properties->Slot)
@@ -264,14 +254,14 @@ void TempSummon::InitSummon()
     WorldObject* owner = GetSummoner();
     if (owner)
     {
-        if (owner->GetTypeId() == TYPEID_UNIT)
+        if (owner->IsCreature())
         {
             if (owner->ToCreature()->IsAIEnabled)
             {
                 owner->ToCreature()->AI()->JustSummoned(this);
             }
         }
-        else if (owner->GetTypeId() == TYPEID_GAMEOBJECT)
+        else if (owner->IsGameObject())
         {
             if (owner->ToGameObject()->AI())
             {
@@ -314,11 +304,11 @@ void TempSummon::UnSummon(uint32 msTime)
 
     if (WorldObject* owner = GetSummoner())
     {
-        if (owner->GetTypeId() == TYPEID_UNIT && owner->ToCreature()->IsAIEnabled)
+        if (owner->IsCreature() && owner->ToCreature()->IsAIEnabled)
         {
             owner->ToCreature()->AI()->SummonedCreatureDespawn(this);
         }
-        else if (owner->GetTypeId() == TYPEID_GAMEOBJECT && owner->ToGameObject()->AI())
+        else if (owner->IsGameObject() && owner->ToGameObject()->AI())
         {
             owner->ToGameObject()->AI()->SummonedCreatureDespawn(this);
         }
@@ -373,15 +363,6 @@ void Minion::InitStats(uint32 duration)
 
     SetReactState(REACT_PASSIVE);
 
-    //npcbot
-    //do not add bot totem to player's controlled list
-    //client indicator will be OwnerGUID
-    if (m_Properties && m_Properties->Slot && m_Properties->Slot >= SUMMON_SLOT_TOTEM_FIRE && m_Properties->Slot < MAX_TOTEM_SLOT &&
-        GetCreatorGUID() && GetCreatorGUID().IsCreature() && GetOwner() && GetOwner()->GetTypeId() == TYPEID_PLAYER &&
-        GetOwner()->ToPlayer()->HaveBot() && GetOwner()->ToPlayer()->GetBotMgr()->GetBot(GetCreatorGUID()))
-        return;
-    //end npcbot
-
     if (Unit* owner = GetOwner())
     {
         SetCreatorGUID(owner->GetGUID());
@@ -416,7 +397,7 @@ void Minion::setDeathState(DeathState s, bool despawn)
     Creature::setDeathState(s, despawn);
     if (s == DeathState::JustDied && IsGuardianPet())
         if (Unit* owner = GetOwner())
-            if (owner->GetTypeId() == TYPEID_PLAYER && owner->GetMinionGUID() == GetGUID())
+            if (owner->IsPlayer() && owner->GetMinionGUID() == GetGUID())
                 for (Unit::ControlSet::const_iterator itr = owner->m_Controlled.begin(); itr != owner->m_Controlled.end(); ++itr)
                     if ((*itr)->IsAlive() && (*itr)->GetEntry() == GetEntry())
                     {
@@ -438,7 +419,7 @@ std::string Minion::GetDebugInfo() const
 Guardian::Guardian(SummonPropertiesEntry const* properties, ObjectGuid owner, bool isWorldObject) : Minion(properties, owner, isWorldObject)
 {
     m_unitTypeMask |= UNIT_MASK_GUARDIAN;
-    if (properties && properties->Type == SUMMON_TYPE_PET)
+    if (properties && (properties->Type == SUMMON_TYPE_PET || properties->Category == SUMMON_CATEGORY_PET))
     {
         m_unitTypeMask |= UNIT_MASK_CONTROLABLE_GUARDIAN;
         InitCharmInfo();
@@ -453,7 +434,7 @@ void Guardian::InitStats(uint32 duration)
     {
         InitStatsForLevel(m_owner->GetLevel());
 
-        if (m_owner->GetTypeId() == TYPEID_PLAYER && HasUnitTypeMask(UNIT_MASK_CONTROLABLE_GUARDIAN))
+        if (m_owner->IsPlayer() && HasUnitTypeMask(UNIT_MASK_CONTROLABLE_GUARDIAN))
             m_charmInfo->InitCharmCreateSpells();
     }
 
@@ -466,7 +447,7 @@ void Guardian::InitSummon()
 
     if (Unit* m_owner = GetOwner())
     {
-        if (m_owner->GetTypeId() == TYPEID_PLAYER && m_owner->GetMinionGUID() == GetGUID() && !m_owner->GetCharmGUID())
+        if (m_owner->IsPlayer() && m_owner->GetMinionGUID() == GetGUID() && !m_owner->GetCharmGUID())
         {
             m_owner->ToPlayer()->CharmSpellInitialize();
         }

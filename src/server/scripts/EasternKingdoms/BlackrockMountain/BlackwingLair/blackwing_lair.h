@@ -19,7 +19,7 @@
 #define DEF_BLACKWING_LAIR_H
 
 #include "CreatureAIImpl.h"
-#include "../scripts/Custom/Timewalking/10Man.h"
+
 constexpr uint32 EncounterCount = 8;
 
 #define BWLScriptName "instance_blackwing_lair"

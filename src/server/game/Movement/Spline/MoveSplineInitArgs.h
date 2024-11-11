@@ -43,7 +43,7 @@ namespace Movement
 
     struct MoveSplineInitArgs
     {
-        MoveSplineInitArgs(size_t path_capacity = 16)
+        MoveSplineInitArgs(std::size_t path_capacity = 16)
         {
             path.reserve(path_capacity);
         }
@@ -54,7 +54,6 @@ namespace Movement
         int32 path_Idx_offset{0};
         float velocity{0.f};
         float parabolic_amplitude{0.f};
-        float vertical_acceleration{ 0.f };
         float time_perc{0.f};
         uint32 splineId{0};
         float initialOrientation{0.f};

@@ -22,19 +22,17 @@
 enum Spells
 {
     SPELL_ARCANE_BOLT       = 13748,
-    SPELL_ARCANE_EXPLOSION  = 10201,
+    SPELL_ARCANE_EXPLOSION  = 1467,
     SPELL_POLYMORPH         = 15534,
-    SPELL_SLOW              = 19137,
-    SPELL_ARCANE_BARRAGE    = 44425
+    SPELL_SLOW              = 19137
 };
 
 enum Timers
 {
     TIMER_ARCANE_BOLT        = 7000,
-    TIMER_ARCANE_EXPLOSION  = 14000,
+    TIMER_ARCANE_EXPLOSION  = 24000,
     TIMER_POLYMORPH         = 12000,
-    TIMER_SLOW              = 15000,
-    TIMER_ARCANE_BARRAGE    = 8000
+    TIMER_SLOW              = 15000
 };
 
 class boss_okthor : public CreatureScript
@@ -60,23 +58,6 @@ public:
             events.ScheduleEvent(SPELL_ARCANE_EXPLOSION, 0.2 * (int) TIMER_ARCANE_EXPLOSION);
             events.ScheduleEvent(SPELL_POLYMORPH, 0.2 * (int) TIMER_POLYMORPH);
             events.ScheduleEvent(SPELL_SLOW, 500);
-            events.ScheduleEvent(SPELL_ARCANE_BARRAGE, TIMER_ARCANE_BARRAGE);
-        }
-
-        void JustDied(Unit* /*killer*/) override
-        {
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            if (players.begin() != players.end())
-            {
-                uint32 baseRewardLevel = 1;
-                bool isDungeon = me->GetMap()->IsDungeon();
-
-                Player* player = players.begin()->GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
-                }
-            }
         }
 
         void UpdateAI(uint32 diff) override
@@ -104,13 +85,21 @@ public:
                     events.ScheduleEvent(SPELL_ARCANE_BOLT, urand(TIMER_ARCANE_BOLT - 2000, TIMER_ARCANE_BOLT + 2000));
                     break;
                 case SPELL_ARCANE_EXPLOSION:
-                    DoCast(SPELL_ARCANE_EXPLOSION);
-                    events.ScheduleEvent(SPELL_ARCANE_EXPLOSION, TIMER_ARCANE_EXPLOSION);
+                    if (me->GetDistance2d(me->GetVictim()) < 50.0f)
+                    {
+                        DoCast(SPELL_ARCANE_EXPLOSION);
+                        nextArcaneExplosionTime = urand(TIMER_ARCANE_EXPLOSION - 2000, TIMER_ARCANE_EXPLOSION + 2000);
+                    }
+                    else
+                    {
+                        nextArcaneExplosionTime = 0.3*urand(TIMER_ARCANE_EXPLOSION - 2000, TIMER_ARCANE_EXPLOSION + 2000);
+                    }
+                    events.ScheduleEvent(SPELL_ARCANE_EXPLOSION, nextArcaneExplosionTime);
                     break;
                 case SPELL_POLYMORPH:
                     if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100, true))
                     {
-                        DoCast(target, SPELL_POLYMORPH, true);
+                        DoCast(target, SPELL_POLYMORPH);
                     }
                     events.ScheduleEvent(SPELL_POLYMORPH, urand(TIMER_POLYMORPH - 2000, TIMER_POLYMORPH + 2000));
                     break;
@@ -120,13 +109,6 @@ public:
                         DoCast(SPELL_SLOW);
                     }
                     events.ScheduleEvent(SPELL_SLOW, TIMER_SLOW);
-                    break;
-                case SPELL_ARCANE_BARRAGE:
-                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100, true))
-                    {
-                        DoCast(target, SPELL_ARCANE_BARRAGE, true);
-                    }
-                    events.ScheduleEvent(SPELL_ARCANE_BARRAGE, urand(SPELL_ARCANE_BARRAGE - 2000, SPELL_ARCANE_BARRAGE + 2000));
                     break;
 
                 default:

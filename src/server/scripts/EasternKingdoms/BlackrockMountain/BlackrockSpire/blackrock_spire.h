@@ -25,8 +25,6 @@ uint32 const EncounterCount         = 23;
 #define DataHeader "BRS"
 
 #define BRSScriptName "instance_blackrock_spire"
-#include "../scripts/Custom/Timewalking/10Man.h"
-
 
 enum DataTypes
 {

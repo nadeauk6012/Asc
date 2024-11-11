@@ -33,13 +33,10 @@ enum Spells
 
 enum Events
 {
-    EVENT_SHADOWFLAME = 1,
-    EVENT_WINGBUFFET = 2,
-    EVENT_FRENZY = 3,
-    EVENT_SPAWN_SHADES = 4
+    EVENT_SHADOWFLAME       = 1,
+    EVENT_WINGBUFFET        = 2,
+    EVENT_FRENZY            = 3
 };
-
-const uint32 NPC_SHADE_OF_FLAMEGOR = 400149;
 
 class boss_flamegor : public CreatureScript
 {
@@ -57,29 +54,6 @@ public:
             events.ScheduleEvent(EVENT_SHADOWFLAME, 18s);
             events.ScheduleEvent(EVENT_WINGBUFFET, 30s);
             events.ScheduleEvent(EVENT_FRENZY, 10s);
-            events.ScheduleEvent(EVENT_SPAWN_SHADES, 20s);
-        }
-
-        void Reset() override
-        {
-            BossAI::Reset();
-            DespawnShades();
-        }
-
-        void JustDied(Unit* /*killer*/) override
-        {
-            BossAI::JustDied(nullptr);
-            DespawnShades();
-            DoCastSelf(875167, true);
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            for (auto const& playerPair : players)
-            {
-                Player* player = playerPair.GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, 1, false);
-                }
-            }
         }
 
         void UpdateAI(uint32 diff) override
@@ -111,10 +85,6 @@ public:
                         DoCast(me, SPELL_FRENZY);
                         events.ScheduleEvent(EVENT_FRENZY, 8s, 10s);
                         break;
-                    case EVENT_SPAWN_SHADES:
-                        SpawnShades();
-                        events.ScheduleEvent(EVENT_SPAWN_SHADES, 50s); 
-                        break;
                 }
 
                 if (me->HasUnitState(UNIT_STATE_CASTING))
@@ -122,27 +92,6 @@ public:
             }
 
             DoMeleeAttackIfReady();
-        }
-
-        void SpawnShades()
-        {
-            for (int i = 0; i < 2; ++i)  
-            {
-                Creature* shade = DoSummon(NPC_SHADE_OF_FLAMEGOR, me, 10.0f, 180000, TEMPSUMMON_CORPSE_DESPAWN);
-                if (shade)
-                    shade->SetInCombatWithZone();
-            }
-        }
-
-        void DespawnShades()
-        {
-            std::list<Creature*> shades;
-            GetCreatureListWithEntryInGrid(shades, me, NPC_SHADE_OF_FLAMEGOR, 150.0f);
-            for (Creature* shade : shades)
-            {
-                if (shade)
-                    shade->DespawnOrUnsummon();
-            }
         }
     };
 

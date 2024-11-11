@@ -15,26 +15,18 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "CellImpl.h"
+#include "CreatureScript.h"
+#include "GridNotifiers.h"
+#include "SpellAuraEffects.h"
+#include "SpellMgr.h"
+#include "SpellScript.h"
+#include "SpellScriptLoader.h"
 /*
  * Scripts for spells with SPELLFAMILY_ROGUE and SPELLFAMILY_GENERIC spells used by rogue players.
  * Ordered alphabetically using scriptname.
  * Scriptnames of files in this file should be prefixed with "spell_rog_".
  */
-
-#include "CellImpl.h"
-#include "CreatureScript.h"
-#include "GridNotifiers.h"
-#include "ScriptMgr.h"
-#include "SpellAuraEffects.h"
-#include "SpellMgr.h"
-#include "SpellScript.h"
-#include "SpellScriptLoader.h"
-#include "SpellAuras.h"
-#include "Player.h"
-
-//npcbot
-#include "Creature.h"
-//end npcbot
 
 enum RogueSpells
 {
@@ -51,73 +43,6 @@ enum RogueSpells
     SPELL_ROGUE_TRICKS_OF_THE_TRADE_DMG_BOOST   = 57933,
     SPELL_ROGUE_TRICKS_OF_THE_TRADE_PROC        = 59628,
 };
-
-class spell_rogue_shadowdance_plus : public SpellScript
-{
-    PrepareSpellScript(spell_rogue_shadowdance_plus);
-
-    void HandleAfterCast()
-    {
-        Unit* caster = GetCaster();
-
-        // Check if the caster is an NPC bot and exclude them
-        if (caster->IsNPCBot())
-            return;
-
-        caster->CastSpell(caster, 920540, true); // Cast spell 920540
-    }
-
-    void Register() override
-    {
-        AfterCast += SpellCastFn(spell_rogue_shadowdance_plus::HandleAfterCast);
-    }
-};
-
-void AddSC_spell_rogue_shadowdance_plus()
-{
-    RegisterSpellScript(spell_rogue_shadowdance_plus);
-}
-
-class spell_rogue_swiftness_strikes : public SpellScript
-{
-    PrepareSpellScript(spell_rogue_swiftness_strikes);
-
-    static const uint32 REQUIRED_AURA_ID = 920019;
-    static const uint32 AURA_ID = 920020;
-    static const uint32 STACK_LIMIT = 12;
-    static const uint32 SPELL_ON_LIMIT = 920021;
-
-    void HandleOnCast()
-    {
-        Unit* caster = GetCaster();
-        if (!caster || caster->IsNPCBot()) // Exclude NPC bots
-            return;
-
-        if (!caster->HasAura(REQUIRED_AURA_ID))
-            return;
-
-        if (urand(1, 100) <= 40)
-        {
-            caster->CastSpell(caster, AURA_ID, true);
-            Aura* aura = caster->GetAura(AURA_ID);
-            if (aura && aura->GetStackAmount() >= STACK_LIMIT)
-            {
-                caster->CastSpell(caster, SPELL_ON_LIMIT, true);
-                aura->Remove();
-            }
-        }
-    }
-
-    void Register() override
-    {
-        OnCast += SpellCastFn(spell_rogue_swiftness_strikes::HandleOnCast);
-    }
-};
-
-void AddSC_spell_rogue_swiftness_strikes()
-{
-    RegisterSpellScript(spell_rogue_swiftness_strikes);
-}
 
 class spell_rog_savage_combat : public AuraScript
 {
@@ -231,10 +156,6 @@ class spell_rog_cheat_death : public AuraScript
     bool Load() override
     {
         absorbChance = GetSpellInfo()->Effects[EFFECT_0].CalcValue();
-        //npcbot
-        if (GetUnitOwner()->IsNPCBot())
-            return true;
-        //end npcbot
         return GetUnitOwner()->ToPlayer();
     }
 
@@ -246,27 +167,6 @@ class spell_rog_cheat_death : public AuraScript
 
     void Absorb(AuraEffect* /*aurEff*/, DamageInfo& dmgInfo, uint32& absorbAmount)
     {
-        //npcbot
-        if (Creature* bot = GetTarget()->ToCreature())
-        {
-            if (dmgInfo.GetDamage() < bot->GetHealth() || bot->HasSpellCooldown(SPELL_ROGUE_CHEAT_DEATH_COOLDOWN) ||
-                bot->HasSpellCooldown(SPELL_ROGUE_CHEAT_DEATH_COOLDOWN) || !roll_chance_i(absorbChance))
-                return;
-
-            bot->CastSpell(bot, SPELL_ROGUE_CHEAT_DEATH_COOLDOWN, true);
-            bot->AddBotSpellCooldown(SPELL_ROGUE_CHEAT_DEATH_COOLDOWN, MINUTE * IN_MILLISECONDS);
-
-            uint32 health10 = bot->CountPctFromMaxHealth(10);
-
-            if (bot->GetHealth() > health10)
-                absorbAmount = dmgInfo.GetDamage() - bot->GetHealth() + health10;
-            else
-                absorbAmount = dmgInfo.GetDamage();
-
-            return;
-        }
-        //end npcbot
-
         Player* target = GetTarget()->ToPlayer();
         if (dmgInfo.GetDamage() < target->GetHealth() || target->HasSpellCooldown(SPELL_ROGUE_CHEAT_DEATH_COOLDOWN) || !roll_chance_i(absorbChance))
             return;
@@ -301,7 +201,7 @@ class spell_rog_deadly_poison : public SpellScript
     {
         _stackAmount = 0;
         // at this point CastItem must already be initialized
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER && GetCastItem();
+        return GetCaster()->IsPlayer() && GetCastItem();
     }
 
     void HandleBeforeHit(SpellMissInfo missInfo)
@@ -381,142 +281,120 @@ class spell_rog_deadly_poison : public SpellScript
 };
 
 // 51690 - Killing Spree
-#define KillingSpreeScriptName "spell_rog_killing_spree"
-class spell_rog_killing_spree : public SpellScriptLoader
+class spell_rog_killing_spree_aura : public AuraScript
 {
-public:
-    spell_rog_killing_spree() : SpellScriptLoader(KillingSpreeScriptName) { }
+    PrepareAuraScript(spell_rog_killing_spree_aura);
 
-    class spell_rog_killing_spree_SpellScript : public SpellScript
+    bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        PrepareSpellScript(spell_rog_killing_spree_SpellScript);
-
-        bool Validate(SpellInfo const* /*spellInfo*/) override
-        {
-            return ValidateSpellInfo({ SPELL_ROGUE_KILLING_SPREE });
-        }
-
-        SpellCastResult CheckCast()
-        {
-            // Kologarn area, Killing Spree should not work
-            if (GetCaster()->GetMapId() == 603 /*Ulduar*/ && GetCaster()->GetDistance2d(1766.936f, -24.748f) < 50.0f)
-                return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
-            return SPELL_CAST_OK;
-        }
-
-        void FilterTargets(std::list<WorldObject*>& targets)
-        {
-            if (targets.empty() || GetCaster()->GetVehicleBase() || GetCaster()->HasUnitState(UNIT_STATE_ROOT))
-                FinishCast(SPELL_FAILED_OUT_OF_RANGE);
-            else
+        return ValidateSpellInfo(
             {
-                // Added attribute not breaking stealth, removes auras here
-                GetCaster()->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_CAST);
-                GetCaster()->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_SPELL_ATTACK);
-            }
-        }
-
-        void HandleDummy(SpellEffIndex /*effIndex*/)
-        {
-            if (Aura* aura = GetCaster()->GetAura(SPELL_ROGUE_KILLING_SPREE))
-            {
-                if (spell_rog_killing_spree_AuraScript* script = dynamic_cast<spell_rog_killing_spree_AuraScript*>(aura->GetScriptByName(KillingSpreeScriptName)))
-                    script->AddTarget(GetHitUnit());
-            }
-        }
-
-        void Register() override
-        {
-            OnCheckCast += SpellCheckCastFn(spell_rog_killing_spree_SpellScript::CheckCast);
-            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_rog_killing_spree_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
-            OnEffectHitTarget += SpellEffectFn(spell_rog_killing_spree_SpellScript::HandleDummy, EFFECT_1, SPELL_EFFECT_DUMMY);
-        }
-    };
-
-    SpellScript* GetSpellScript() const override
-    {
-        return new spell_rog_killing_spree_SpellScript();
+                SPELL_ROGUE_KILLING_SPREE_TELEPORT,
+                SPELL_ROGUE_KILLING_SPREE_WEAPON_DMG,
+                SPELL_ROGUE_KILLING_SPREE_DMG_BUFF
+            });
     }
 
-    class spell_rog_killing_spree_AuraScript : public AuraScript
+    void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        PrepareAuraScript(spell_rog_killing_spree_AuraScript);
+        GetTarget()->CastSpell(GetTarget(), SPELL_ROGUE_KILLING_SPREE_DMG_BUFF, true);
+    }
 
-        bool Validate(SpellInfo const* /*spellInfo*/) override
+    void HandleEffectPeriodic(AuraEffect const* /*aurEff*/)
+    {
+        while (!_targets.empty())
         {
-            return ValidateSpellInfo(
-                {
-                    SPELL_ROGUE_KILLING_SPREE_TELEPORT,
-                    SPELL_ROGUE_KILLING_SPREE_WEAPON_DMG,
-                    SPELL_ROGUE_KILLING_SPREE_DMG_BUFF
-                });
-        }
-
-        void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-        {
-            GetTarget()->CastSpell(GetTarget(), SPELL_ROGUE_KILLING_SPREE_DMG_BUFF, true);
-        }
-
-        void HandleEffectPeriodic(AuraEffect const* /*aurEff*/)
-        {
-            while (!_targets.empty())
+            ObjectGuid guid = Acore::Containers::SelectRandomContainerElement(_targets);
+            if (Unit* target = ObjectAccessor::GetUnit(*GetTarget(), guid))
             {
-                ObjectGuid guid = Acore::Containers::SelectRandomContainerElement(_targets);
-                if (Unit* target = ObjectAccessor::GetUnit(*GetTarget(), guid))
+                // xinef: target may be no longer valid
+                if (!GetTarget()->IsValidAttackTarget(target) || target->HasStealthAura() || target->HasInvisibilityAura())
                 {
-                    // xinef: target may be no longer valid
-                    if (!GetTarget()->IsValidAttackTarget(target) || target->HasStealthAura() || target->HasInvisibilityAura())
-                    {
-                        _targets.remove(guid);
-                        continue;
-                    }
-
-                    GetTarget()->CastSpell(target, SPELL_ROGUE_KILLING_SPREE_TELEPORT, true);
-
-                    //npcbot: prevent crash from trying to access player fields
-                    if (GetTarget()->GetTypeId() == TYPEID_PLAYER)
-                    {
-                    //end npcbot
-                    // xinef: ensure fast coordinates switch, dont wait for client to send opcode
-                    WorldLocation const& dest = GetTarget()->ToPlayer()->GetTeleportDest();
-                    GetTarget()->ToPlayer()->UpdatePosition(dest, true);
-                    //npcbot
-                    }
-                    //end npcbot
-
-                    GetTarget()->CastSpell(target, SPELL_ROGUE_KILLING_SPREE_WEAPON_DMG, TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_DONT_REPORT_CAST_ERROR));
-                    break;
-                }
-                else
                     _targets.remove(guid);
+                    continue;
+                }
+
+                GetTarget()->CastSpell(target, SPELL_ROGUE_KILLING_SPREE_TELEPORT, true);
+
+                // xinef: ensure fast coordinates switch, dont wait for client to send opcode
+                WorldLocation const& dest = GetTarget()->ToPlayer()->GetTeleportDest();
+                GetTarget()->ToPlayer()->UpdatePosition(dest, true);
+
+                GetTarget()->CastSpell(target, SPELL_ROGUE_KILLING_SPREE_WEAPON_DMG, TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_DONT_REPORT_CAST_ERROR));
+                break;
             }
+            else
+                _targets.remove(guid);
         }
+    }
 
-        void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-        {
-            GetTarget()->RemoveAurasDueToSpell(SPELL_ROGUE_KILLING_SPREE_DMG_BUFF);
-        }
-
-        void Register() override
-        {
-            AfterEffectApply += AuraEffectApplyFn(spell_rog_killing_spree_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_rog_killing_spree_AuraScript::HandleEffectPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
-            AfterEffectRemove += AuraEffectRemoveFn(spell_rog_killing_spree_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
-        }
-
-    public:
-        void AddTarget(Unit* target)
-        {
-            _targets.push_back(target->GetGUID());
-        }
-
-    private:
-        GuidList _targets;
-    };
-
-    AuraScript* GetAuraScript() const override
+    void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        return new spell_rog_killing_spree_AuraScript();
+        GetTarget()->RemoveAurasDueToSpell(SPELL_ROGUE_KILLING_SPREE_DMG_BUFF);
+    }
+
+public:
+    void AddTarget(Unit* target)
+    {
+        _targets.push_back(target->GetGUID());
+    }
+
+    void Register() override
+    {
+        AfterEffectApply += AuraEffectApplyFn(spell_rog_killing_spree_aura::HandleApply, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_rog_killing_spree_aura::HandleEffectPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_rog_killing_spree_aura::HandleRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+
+private:
+    GuidList _targets;
+};
+
+#define KillingSpreeScriptName "spell_rog_killing_spree"
+typedef spell_rog_killing_spree_aura spell_rog_killing_spree_aura_script;
+class spell_rog_killing_spree : public SpellScript
+{
+    PrepareSpellScript(spell_rog_killing_spree);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_ROGUE_KILLING_SPREE });
+    }
+
+    SpellCastResult CheckCast()
+    {
+        // Kologarn area, Killing Spree should not work
+        if (GetCaster()->GetMapId() == 603 /*Ulduar*/ && GetCaster()->GetDistance2d(1766.936f, -24.748f) < 50.0f)
+            return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
+        return SPELL_CAST_OK;
+    }
+
+    void FilterTargets(std::list<WorldObject*>& targets)
+    {
+        if (targets.empty() || GetCaster()->GetVehicleBase() || GetCaster()->HasUnitState(UNIT_STATE_ROOT))
+            FinishCast(SPELL_FAILED_OUT_OF_RANGE);
+        else
+        {
+            // Added attribute not breaking stealth, removes auras here
+            GetCaster()->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_CAST);
+            GetCaster()->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_SPELL_ATTACK);
+        }
+    }
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        if (Aura* aura = GetCaster()->GetAura(SPELL_ROGUE_KILLING_SPREE))
+        {
+            if (spell_rog_killing_spree_aura* script = dynamic_cast<spell_rog_killing_spree_aura_script*>(aura->GetScriptByName(KillingSpreeScriptName)))
+                script->AddTarget(GetHitUnit());
+        }
+    }
+
+    void Register() override
+    {
+        OnCheckCast += SpellCheckCastFn(spell_rog_killing_spree::CheckCast);
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_rog_killing_spree::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
+        OnEffectHitTarget += SpellEffectFn(spell_rog_killing_spree::HandleDummy, EFFECT_1, SPELL_EFFECT_DUMMY);
     }
 };
 
@@ -560,7 +438,7 @@ class spell_rog_preparation : public SpellScript
 
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
@@ -627,7 +505,7 @@ class spell_rog_prey_on_the_weak : public AuraScript
     {
         Unit* target = GetTarget();
         Unit* victim = target->GetVictim();
-        if (!victim && target->GetTypeId() == TYPEID_PLAYER)
+        if (!victim && target->IsPlayer())
             victim = target->ToPlayer()->GetSelectedUnit();
 
         if (victim && (target->GetHealthPct() > victim->GetHealthPct()))
@@ -656,11 +534,7 @@ class spell_rog_rupture : public AuraScript
     bool Load() override
     {
         Unit* caster = GetCaster();
-        //npcbot
-        if (caster && caster->IsNPCBot())
-            return true;
-        //end npcbot
-        return caster && caster->GetTypeId() == TYPEID_PLAYER;
+        return caster && caster->IsPlayer();
     }
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& canBeRecalculated)
@@ -678,18 +552,6 @@ class spell_rog_rupture : public AuraScript
                 0.03428571f,    // 4 points: ${($m1 + $b1*4 + 0.03428571 * $AP) * 7} damage over 14 secs
                 0.0375f         // 5 points: ${($m1 + $b1*5 + 0.0375 * $AP) * 8} damage over 16 secs
             };
-
-            //npcbot
-            if (caster->GetTypeId() == TYPEID_UNIT)
-            {
-                uint8 cp = caster->ToCreature()->GetCreatureComboPoints();
-                if (cp > 5)
-                    cp = 5;
-
-                amount += int32(caster->GetTotalAttackPowerValue(BASE_ATTACK) * attackpowerPerCombo[cp]);
-                return;
-            }
-            //end npcbot
 
             uint8 cp = caster->ToPlayer()->GetComboPoints();
             if (cp > 5)
@@ -712,7 +574,7 @@ class spell_rog_shiv : public SpellScript
 
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
@@ -816,43 +678,6 @@ class spell_rog_pickpocket : public SpellScript
     }
 };
 
-class spell_rogue_add_combo_points : public SpellScriptLoader
-{
-public:
-    spell_rogue_add_combo_points() : SpellScriptLoader("spell_rogue_add_combo_points") { }
-
-    class spell_rogue_add_combo_points_SpellScript : public SpellScript
-    {
-        PrepareSpellScript(spell_rogue_add_combo_points_SpellScript);
-
-        void HandleAfterCast()
-        {
-            if (Player* player = GetCaster()->ToPlayer())
-            {
-                if (Unit* target = player->GetSelectedUnit())
-                {
-                    // Retrieve the base points of Effect 1 to determine the number of combo points to add
-                    int32 comboPointsToAdd = GetSpellInfo()->Effects[EFFECT_1].BasePoints;
-
-                    // Add the determined number of combo points to the player's target
-                    player->AddComboPoints(target, comboPointsToAdd);
-                    player->SendComboPoints();
-                }
-            }
-        }
-
-        void Register() override
-        {
-            AfterCast += SpellCastFn(spell_rogue_add_combo_points_SpellScript::HandleAfterCast);
-        }
-    };
-
-    SpellScript* GetSpellScript() const override
-    {
-        return new spell_rogue_add_combo_points_SpellScript();
-    }
-};
-
 enum vanish
 {
     SPELL_STEALTH           = 1784,
@@ -934,7 +759,7 @@ void AddSC_rogue_spell_scripts()
     RegisterSpellScript(spell_rog_blade_flurry);
     RegisterSpellScript(spell_rog_cheat_death);
     RegisterSpellScript(spell_rog_deadly_poison);
-    new spell_rog_killing_spree();
+    RegisterSpellAndAuraScriptPair(spell_rog_killing_spree, spell_rog_killing_spree_aura);
     RegisterSpellScript(spell_rog_nerves_of_steel);
     RegisterSpellScript(spell_rog_preparation);
     RegisterSpellScript(spell_rog_prey_on_the_weak);
@@ -943,10 +768,6 @@ void AddSC_rogue_spell_scripts()
     RegisterSpellScript(spell_rog_tricks_of_the_trade);
     RegisterSpellScript(spell_rog_tricks_of_the_trade_proc);
     RegisterSpellScript(spell_rog_pickpocket);
-    RegisterSpellScript(spell_rogue_swiftness_strikes);
-    RegisterSpellScript(spell_rogue_shadowdance_plus);
-    new spell_rogue_add_combo_points();
     RegisterSpellScript(spell_rog_vanish_purge);
     RegisterSpellScript(spell_rog_vanish);
 }
-

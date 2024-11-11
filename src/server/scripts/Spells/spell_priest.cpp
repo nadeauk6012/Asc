@@ -15,23 +15,19 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
-/*
- * Scripts for spells with SPELLFAMILY_PRIEST and SPELLFAMILY_GENERIC spells used by priest players.
- * Ordered alphabetically using scriptname.
- * Scriptnames of files in this file should be prefixed with "spell_pri_".
- */
-
 #include "CreatureScript.h"
 #include "GridNotifiers.h"
 #include "Player.h"
-#include "ScriptMgr.h"
-#include "Spell.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 #include "TemporarySummon.h"
+/*
+ * Scripts for spells with SPELLFAMILY_PRIEST and SPELLFAMILY_GENERIC spells used by priest players.
+ * Ordered alphabetically using scriptname.
+ * Scriptnames of files in this file should be prefixed with "spell_pri_".
+ */
 
 enum PriestSpells
 {
@@ -78,26 +74,6 @@ enum Mics
     PRIEST_LIGHTWELL_NPC_6                          = 31883
 };
 
-
-//class SurgeOfLight : public PlayerScript
-//{
-//public:
-//    SurgeOfLight() : PlayerScript("SurgeOfLight") { }
-
-//    void OnSpellCast(Player* player, Spell* spell, bool /*skipCheck*/) override
-//    {
-//        if (spell->GetSpellInfo()->Id == 33151) // SURGE_OF_LIGHT_1
-//        {
-//            player->CastSpell(player, 100205, true); // CUSTOM
-//       }
-//    }
-//};
-
-//void AddSC_SurgeOfLight()
-//{
-//    new SurgeOfLight();
-//}
-
 class spell_pri_shadowfiend_scaling : public AuraScript
 {
     PrepareAuraScript(spell_pri_shadowfiend_scaling);
@@ -142,7 +118,7 @@ class spell_pri_shadowfiend_scaling : public AuraScript
             amount = CalculatePct(std::max<int32>(0, shadow), 30);
 
             // xinef: Update appropriate player field
-            if (owner->GetTypeId() == TYPEID_PLAYER)
+            if (owner->IsPlayer())
                 owner->SetUInt32Value(PLAYER_PET_SPELL_POWER, (uint32)amount);
         }
     }
@@ -403,7 +379,7 @@ class spell_pri_lightwell : public SpellScript
 
     bool Load() override
     {
-        return GetCaster()->GetTypeId() == TYPEID_UNIT;
+        return GetCaster()->IsCreature();
     }
 
     void HandleScriptEffect(SpellEffIndex /* effIndex */)
@@ -576,11 +552,7 @@ class spell_pri_penance : public SpellScript
 
     bool Load() override
     {
-        //npcbot
-        if (GetCaster() && GetCaster()->IsNPCBot())
-            return true;
-        //end npcbot
-        return GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster()->IsPlayer();
     }
 
     bool Validate(SpellInfo const* spellInfo) override
@@ -810,11 +782,7 @@ class spell_pri_renew : public AuraScript
 
     bool Load() override
     {
-        //npcbot
-        if (GetCaster() && GetCaster()->IsNPCBot())
-            return true;
-        //end npcbot
-        return GetCaster() && GetCaster()->GetTypeId() == TYPEID_PLAYER;
+        return GetCaster() && GetCaster()->IsPlayer();
     }
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
@@ -926,17 +894,6 @@ class spell_pri_vampiric_touch : public AuraScript
 class spell_pri_mind_control : public AuraScript
 {
     PrepareAuraScript(spell_pri_mind_control);
-    // Dinkle - Do not mind control specified races, UD, Eredar, Worgen
-    bool CheckRaceMask(Unit* target)
-    {
-        uint32 racemask = 65536 | 16 | 32768; // Combine all the racemasks
-        if (Player* player = target->ToPlayer())
-        {
-            if ((1 << (player->getRace() - 1)) & racemask)
-                return false; // Target race is in the specified racemasks, do not apply effect
-        }
-        return true;
-    }
 
     void HandleApplyEffect(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
@@ -944,9 +901,6 @@ class spell_pri_mind_control : public AuraScript
         {
             if (Unit* target = GetTarget())
             {
-                if (!CheckRaceMask(target))
-                    return; // Do not apply effect if target is of specified race
-
                 uint32 duration = static_cast<uint32>(GetDuration());
                 caster->SetInCombatWith(target, duration);
                 target->SetInCombatWith(caster, duration);
@@ -960,9 +914,6 @@ class spell_pri_mind_control : public AuraScript
         {
             if (Unit* target = GetTarget())
             {
-                if (!CheckRaceMask(target))
-                    return; // Do not remove effect if target is of specified race
-
                 caster->SetCombatTimer(0);
                 target->SetCombatTimer(0);
             }
@@ -1021,7 +972,5 @@ void AddSC_priest_spell_scripts()
     RegisterSpellScript(spell_pri_shadow_word_death);
     RegisterSpellScript(spell_pri_vampiric_touch);
     RegisterSpellScript(spell_pri_mind_control);
-//    new SurgeOfLight();
     RegisterSpellScript(spell_pri_t4_4p_bonus);
 }
-

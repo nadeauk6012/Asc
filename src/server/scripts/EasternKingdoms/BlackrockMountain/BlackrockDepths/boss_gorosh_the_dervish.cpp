@@ -21,18 +21,16 @@
 
 enum Spells
 {
-    SPELL_WHIRLWIND = 15589,
+    SPELL_WHIRLWIND    = 15589,
     SPELL_MORTALSTRIKE = 15708,
-    SPELL_BLOODLUST = 21049,
-    SPELL_SHOCKWAVE = 46968 
+    SPELL_BLOODLUST    = 21049
 };
 
 enum Timers
 {
     TIMER_WHIRLWIND = 12000,
-    TIMER_MORTAL = 18000,
-    TIMER_BLOODLUST = 25000,
-    TIMER_SHOCKWAVE = 16000 
+    TIMER_MORTAL    = 22000,
+    TIMER_BLOODLUST = 30000
 };
 
 class boss_gorosh_the_dervish : public CreatureScript
@@ -49,66 +47,58 @@ public:
     {
         boss_gorosh_the_dervishAI(Creature* creature) : BossAI(creature, DATA_GOROSH) { }
 
+        uint32 nextWhirlwindTime;
+
         void JustEngagedWith(Unit* /*who*/) override
         {
             _JustEngagedWith();
-            events.ScheduleEvent(SPELL_WHIRLWIND, TIMER_WHIRLWIND);
-            events.ScheduleEvent(SPELL_MORTALSTRIKE, TIMER_MORTAL);
-            events.ScheduleEvent(SPELL_BLOODLUST, TIMER_BLOODLUST);
-            events.ScheduleEvent(SPELL_SHOCKWAVE, TIMER_SHOCKWAVE); 
-        }
-
-        void JustDied(Unit* /*killer*/) override
-        {
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            if (players.begin() != players.end())
-            {
-                uint32 baseRewardLevel = 1;
-                bool isDungeon = me->GetMap()->IsDungeon();
-
-                Player* player = players.begin()->GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
-                }
-            }
+            events.ScheduleEvent(SPELL_WHIRLWIND, 0.2 * (int) TIMER_WHIRLWIND);
+            events.ScheduleEvent(SPELL_MORTALSTRIKE, 0.2 * (int) TIMER_MORTAL);
+            events.ScheduleEvent(SPELL_BLOODLUST, 0.2 * (int) TIMER_BLOODLUST);
         }
 
         void UpdateAI(uint32 diff) override
         {
+            // Return since we have no target
             if (!UpdateVictim())
+            {
                 return;
-
+            }
             events.Update(diff);
 
             if (me->HasUnitState(UNIT_STATE_CASTING))
+            {
                 return;
-
+            }
             while (uint32 eventId = events.ExecuteEvent())
             {
                 switch (eventId)
                 {
                 case SPELL_WHIRLWIND:
-                    DoCastVictim(SPELL_WHIRLWIND);
-                    events.ScheduleEvent(SPELL_WHIRLWIND, TIMER_WHIRLWIND);
+                    if (me->GetDistance2d(me->GetVictim()) < 10.0f)
+                    {
+                        DoCastVictim(SPELL_WHIRLWIND);
+                        nextWhirlwindTime = urand(TIMER_WHIRLWIND - 2000, TIMER_WHIRLWIND + 2000);
+                    }
+                    else
+                    {
+                        // reschedule sooner
+                        nextWhirlwindTime = 0.3 * urand(TIMER_WHIRLWIND - 2000, TIMER_WHIRLWIND + 2000);
+                    }
+                    events.ScheduleEvent(SPELL_WHIRLWIND, nextWhirlwindTime);
                     break;
                 case SPELL_MORTALSTRIKE:
                     DoCastVictim(SPELL_MORTALSTRIKE);
-                    events.ScheduleEvent(SPELL_MORTALSTRIKE, TIMER_MORTAL);
+                    events.ScheduleEvent(SPELL_MORTALSTRIKE, urand(TIMER_MORTAL - 2000, TIMER_MORTAL + 2000));
                     break;
                 case SPELL_BLOODLUST:
                     DoCastSelf(SPELL_BLOODLUST);
-                    events.ScheduleEvent(SPELL_BLOODLUST, TIMER_BLOODLUST);
-                    break;
-                case SPELL_SHOCKWAVE: 
-                    DoCastAOE(SPELL_SHOCKWAVE);
-                    events.ScheduleEvent(SPELL_SHOCKWAVE, TIMER_SHOCKWAVE);
+                    events.ScheduleEvent(SPELL_BLOODLUST, urand(TIMER_BLOODLUST - 2000, TIMER_BLOODLUST + 2000));
                     break;
                 default:
                     break;
                 }
             }
-
             DoMeleeAttackIfReady();
         }
     };

@@ -69,20 +69,6 @@ struct boss_quartermaster_zigris : public BossAI
     void JustDied(Unit* /*killer*/) override
     {
         _JustDied();
-        Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        if (!players.IsEmpty())
-        {
-            uint32 baseRewardLevel = 1;
-            bool isDungeon = me->GetMap()->IsDungeon();
-
-            for (auto const& playerPair : players)
-            {
-                if (Player* player = playerPair.GetSource())
-                {
-                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
-                }
-            }
-        }
     }
 
     void SpellHitTarget(Unit* /*target*/, SpellInfo const* spellInfo) override

@@ -19,7 +19,6 @@
 #define DEF_SCHOLOMANCE_H
 
 #include "CreatureAIImpl.h"
-#include "../scripts/Custom/Timewalking/10Man.h"
 
 #define ScholomanceScriptName "instance_scholomance"
 

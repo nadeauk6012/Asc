@@ -19,7 +19,6 @@
 #define DEF_TEMPLE_OF_AHNQIRAJ_H
 
 #include "CreatureAIImpl.h"
-#include "../scripts/Custom/Timewalking/10Man.h"
 
 #define DataHeader "AQT"
 #define TempleOfAhnQirajScriptName "instance_temple_of_ahnqiraj"
@@ -61,7 +60,7 @@ enum Creatures
     NPC_BODY_OF_CTHUN       = 15809,
     NPC_GIANT_CLAW_TENTACLE = 15728,
     NPC_GIANT_EYE_TENTACLE  = 15334,
-    NPC_FLESH_TENTACLE      = 400159,
+    NPC_FLESH_TENTACLE      = 15802,
     NPC_GIANT_PORTAL        = 15910,
     NPC_SARTURA_ROYAL_GUARD = 15984,
     NPC_VISCIDUS            = 15299,

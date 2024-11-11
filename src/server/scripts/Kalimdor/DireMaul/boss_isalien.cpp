@@ -19,7 +19,6 @@
 #include "ScriptedCreature.h"
 #include "TaskScheduler.h"
 #include "dire_maul.h"
-#include "../scripts/Custom/Timewalking/10Man.h"
 
 enum Texts
 {
@@ -129,18 +128,6 @@ struct boss_isalien : public BossAI
     {
         _JustDied();
         Talk(SAY_DEATH);
-        Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        if (players.begin() != players.end())
-        {
-            uint32 baseRewardLevel = 1;
-            bool isDungeon = me->GetMap()->IsDungeon();
-
-            Player* player = players.begin()->GetSource();
-            if (player)
-            {
-                DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
-            }
-        }
     }
 
 protected:

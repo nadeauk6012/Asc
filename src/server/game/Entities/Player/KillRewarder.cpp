@@ -23,10 +23,6 @@
 #include "ScriptMgr.h"
 #include "SpellAuraEffects.h"
 
-//npcbot
-#include "botmgr.h"
-//end npcbot
-
 // KillRewarder incapsulates logic of rewarding player upon kill with:
 // * XP;
 // * honor;
@@ -74,12 +70,8 @@ KillRewarder::KillRewarder(Player* killer, Unit* victim, bool isBattleGround) :
         _isFullXP(false), _maxLevel(0), _isBattleGround(isBattleGround), _isPvP(false)
 {
     // mark the credit as pvp if victim is player
-    if (victim->GetTypeId() == TYPEID_PLAYER)
+    if (victim->IsPlayer())
         _isPvP = true;
-    //npcbot
-    else if (victim->IsNPCBotOrPet())
-        _isPvP = true;
-    //end npcbot
         // or if its owned by player and its not a vehicle
     else if (victim->GetCharmerOrOwnerGUID().IsPlayer())
         _isPvP = !victim->IsVehicle();
@@ -138,7 +130,7 @@ void KillRewarder::_InitXP(Player* player)
         _xp = Acore::XP::Gain(player, _victim, _isBattleGround);
 
     if (_xp && !_isBattleGround && _victim) // pussywizard: npcs with relatively low hp give lower exp
-        if (_victim->GetTypeId() == TYPEID_UNIT)
+        if (_victim->IsCreature())
             if (const CreatureTemplate* ct = _victim->ToCreature()->GetCreatureTemplate())
                 if (ct->ModHealth <= 0.75f && ct->ModHealth >= 0.0f)
                     _xp = uint32(_xp * ct->ModHealth);
@@ -173,27 +165,6 @@ void KillRewarder::_RewardXP(Player* player, float rate)
         Unit::AuraEffectList const& auras = player->GetAuraEffectsByType(SPELL_AURA_MOD_XP_PCT);
         for (Unit::AuraEffectList::const_iterator i = auras.begin(); i != auras.end(); ++i)
             AddPct(xp, (*i)->GetAmount());
-
-        //npcbot 4.2.2.1. Apply NpcBot XP reduction
-        uint8 bots_count = 0;
-        if (_group)
-        {
-            for (GroupReference const* itr = _group->GetFirstMember(); itr != nullptr; itr = itr->next())
-            {
-                if (Player const* gPlayer = itr->GetSource())
-                    bots_count = std::max<uint8>(bots_count, gPlayer->GetNpcBotsCount());
-            }
-        }
-        else
-            bots_count = player->GetNpcBotsCount();
-        uint8 xp_reduction = BotMgr::GetNpcBotXpReduction();
-        uint8 xp_reduction_start = BotMgr::GetNpcBotXpReductionStartingNumber();
-        if (xp_reduction_start > 0 && xp_reduction > 0 && bots_count >= xp_reduction_start)
-        {
-            uint32 ratePct = std::max<int32>(100 - ((bots_count - (xp_reduction_start - 1)) * xp_reduction), 10);
-            xp = xp * ratePct / 100;
-        }
-        //end npcbot
 
         // 4.2.3. Give XP to player.
         sScriptMgr->OnGivePlayerXP(player, xp, _victim, PlayerXPSource::XPSOURCE_KILL);
@@ -230,7 +201,7 @@ void KillRewarder::_RewardPlayer(Player* player, bool isDungeon)
         // 4.1. Give honor (player must be alive and not on BG).
         _RewardHonor(player);
         // 4.1.1 Send player killcredit for quests with PlayerSlain
-        if (_victim->GetTypeId() == TYPEID_PLAYER)
+        if (_victim->IsPlayer())
             player->KilledPlayerCredit();
     }
 
@@ -285,7 +256,7 @@ void KillRewarder::_RewardGroup()
                     {
                         _RewardPlayer(member, isDungeon);
                         // Xinef: only count players
-                        //if (_victim->GetTypeId() == TYPEID_PLAYER)
+                        //if (_victim->IsPlayer())
                         //    member->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_SPECIAL_PVP_KILL, 1, 0, _victim);
                     }
                 }

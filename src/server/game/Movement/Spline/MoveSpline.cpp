@@ -121,7 +121,7 @@ namespace Movement
 
     void MoveSpline::init_spline(const MoveSplineInitArgs& args)
     {
-        const SplineBase::EvaluationMode modes[2] = { SplineBase::ModeLinear, SplineBase::ModeCatmullrom };
+        const SplineBase::EvaluationMode modes[2] = {SplineBase::ModeLinear, SplineBase::ModeCatmullrom};
         if (args.flags.cyclic)
         {
             uint32 cyclic_point = 0;
@@ -183,13 +183,8 @@ namespace Movement
             effect_start_time = Duration() * args.time_perc;
             if (args.flags.parabolic && effect_start_time < Duration())
             {
-                if (args.parabolic_amplitude != 0.0f)
-                {
-                    float f_duration = MSToSec(Duration() - effect_start_time);
-                    vertical_acceleration = args.parabolic_amplitude * 8.f / (f_duration * f_duration);
-                }
-                else if (args.vertical_acceleration != 0.0f)
-                    vertical_acceleration = args.vertical_acceleration;
+                float f_duration = MSToSec(Duration() - effect_start_time);
+                vertical_acceleration = args.parabolic_amplitude * 8.f / (f_duration * f_duration);
             }
         }
     }
@@ -206,13 +201,14 @@ namespace Movement
     bool MoveSplineInitArgs::Validate(Unit* unit) const
     {
 #define CHECK(exp) \
-if (!(exp)) \
-{ \
-    if (!unit) \
-        LOG_ERROR("misc.movesplineinitargs", "MoveSplineInitArgs::Validate: expression '{}' failed for cyclic spline continuation", #exp); \
-    return false;\
-}
-
+        if (!(exp)) \
+        { \
+            if (unit) \
+                LOG_ERROR("misc.movesplineinitargs", "MoveSplineInitArgs::Validate: expression '{}' failed for {}", #exp, unit->GetGUID().ToString()); \
+            else \
+                LOG_ERROR("misc.movesplineinitargs", "MoveSplineInitArgs::Validate: expression '{}' failed for cyclic spline continuation", #exp); \
+            return false;\
+        }
         CHECK(path.size() > 1);
         CHECK(velocity > 0.01f);
         CHECK(time_perc >= 0.f && time_perc <= 1.f);

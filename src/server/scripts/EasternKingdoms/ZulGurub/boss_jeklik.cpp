@@ -120,7 +120,7 @@ struct boss_jeklik : public BossAI
         BossAI::Reset();
 
         me->SetHomePosition(JeklikCaveHomePosition);
-        DoCastSelf(875167, true);
+
         me->SetDisableGravity(false);
         me->SetReactState(REACT_PASSIVE);
         BossAI::me->SetCombatMovement(false);
@@ -263,16 +263,6 @@ struct boss_jeklik : public BossAI
     {
         BossAI::JustDied(killer);
         Talk(SAY_DEATH);
-        DoCastSelf(875167, true);
-        Map::PlayerList const& players = me->GetMap()->GetPlayers();
-        for (auto const& playerPair : players)
-        {
-            Player* player = playerPair.GetSource();
-            if (player)
-            {
-                DistributeChallengeRewards(player, me, 1, false);
-            }
-        }
     }
 };
 
@@ -345,7 +335,7 @@ struct npc_batrider : public CreatureAI
         {
             _scheduler.Schedule(2s, [this](TaskContext context)
             {
-                CastSpellOnRandomTarget(SPELL_BATRIDER_THROW_LIQUID_FIRE, 100.0f);
+                DoCastRandomTarget(SPELL_BATRIDER_THROW_LIQUID_FIRE);
                 context.Repeat(8s);
             });
         }
@@ -375,24 +365,6 @@ struct npc_batrider : public CreatureAI
                 _scheduler.CancelAll();
                 DoCastSelf(SPELL_BATRIDER_UNSTABLE_CONCOCTION);
             }
-        }
-    }
-
-    void CastSpellOnRandomTarget(uint32 spellId, float range)
-    {
-        std::list<Unit*> targets;
-        Acore::AnyUnitInObjectRangeCheck check(me, range);
-        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
-        Cell::VisitAllObjects(me, searcher, range);
-
-        targets.remove_if([this](Unit* unit) -> bool {
-            return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
-            });
-
-        if (!targets.empty())
-        {
-            Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
-            DoCast(target, spellId);
         }
     }
 
@@ -451,4 +423,3 @@ void AddSC_boss_jeklik()
     RegisterCreatureAI(npc_batrider);
     RegisterSpellScript(spell_batrider_bomb);
 }
-

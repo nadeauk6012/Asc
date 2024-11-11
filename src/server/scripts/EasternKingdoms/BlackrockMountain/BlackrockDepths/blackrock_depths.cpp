@@ -32,26 +32,14 @@ enum IronhandData
     IRONHAND_N_GROUPS          = 3,
     SPELL_GOUT_OF_FLAMES       = 15529
 };
-//Dinkle: Hardcoded braziers because of RDF fuckery
+
 class go_shadowforge_brazier : public GameObjectScript
 {
 public:
     go_shadowforge_brazier() : GameObjectScript("go_shadowforge_brazier") {}
 
-    static bool northBrazierLit;
-    static bool southBrazierLit;
-
-    bool OnGossipHello(Player* player, GameObject* go) override
+    bool OnGossipHello(Player* /*player*/, GameObject* go) override
     {
-        if (!player->HasItemCount(11885)) // Check if the player has a Shadowforge Torch
-        {
-            player->GetSession()->SendNotification("You need a Shadowforge Torch to use this.");
-            return true;
-        }
-
-        // Consume a Shadowforge Torch from the player's inventory
-        player->DestroyItemCount(11885, 1, true);
-
         if (InstanceScript* instance = go->GetInstanceScript())
         {
             GameObject* northBrazier = ObjectAccessor::GetGameObject(*go, instance->GetGuidData(DATA_SF_BRAZIER_N));
@@ -62,37 +50,23 @@ public:
                 return false;
             }
 
-            // Check which brazier the player is interacting with and set the local flag
-            if (go->GetGUID() == northBrazier->GetGUID())
-            {
-                northBrazierLit = true;
-            }
-            else if (go->GetGUID() == southBrazier->GetGUID())
-            {
-                southBrazierLit = true;
-            }
-
             // should only happen on first brazier
             if (instance->GetData(TYPE_LYCEUM) == NOT_STARTED)
             {
                 instance->SetData(TYPE_LYCEUM, IN_PROGRESS);
             }
 
-            // Check if both braziers are lit locally
-            if (northBrazierLit && southBrazierLit)
+            // Check if the opposite brazier is lit - if it is, open the gates.
+            if ((go->GetGUID() == northBrazier->GetGUID() && southBrazier->GetGoState() == GO_STATE_ACTIVE) || (go->GetGUID() == southBrazier->GetGUID() && northBrazier->GetGoState() == GO_STATE_ACTIVE))
             {
                 instance->SetData(TYPE_LYCEUM, DONE);
             }
-
             return false;
         }
         return false;
     };
 };
 
-bool go_shadowforge_brazier::northBrazierLit = false;
-bool go_shadowforge_brazier::southBrazierLit = false;
-//end Dinkle
 class ironhand_guardian : public CreatureScript
 {
 public:
@@ -329,7 +303,7 @@ public:
             bool doReset = false;
             if (resetTimer > 0)
             {
-                for (const auto& sum : summons)
+                for (auto const& sum : summons)
                 {
                     if (Creature* creature = ObjectAccessor::GetCreature(*me, sum))
                     {
@@ -485,22 +459,6 @@ public:
             ThunderClap_Timer = 12000;
             FireballVolley_Timer = 0;
             MightyBlow_Timer = 15000;
-        }
-
-        void JustDied(Unit* /*killer*/) override
-        {
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            if (players.begin() != players.end())
-            {
-                uint32 baseRewardLevel = 1;
-                bool isDungeon = me->GetMap()->IsDungeon();
-
-                Player* player = players.begin()->GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, baseRewardLevel, isDungeon);
-                }
-            }
         }
 
         void UpdateAI(uint32 diff) override
@@ -745,66 +703,6 @@ public:
     };
 };
 
-class npc_wandering_flame_custom : public CreatureScript
-{
-public:
-    npc_wandering_flame_custom() : CreatureScript("npc_wandering_flame_custom") {}
-
-    struct npc_wandering_flame_customAI : public ScriptedAI
-    {
-        float center_x, center_y, radius;
-        uint32 moveTimer;
-
-        npc_wandering_flame_customAI(Creature* creature) : ScriptedAI(creature)
-        {
-            me->SetReactState(REACT_PASSIVE);
-            me->SetCanFly(true);
-            me->SetDisableGravity(true);
-
-            center_x = me->GetPositionX();
-            center_y = me->GetPositionY();
-            radius = 15.0f;
-
-            moveTimer = 1;
-        }
-
-        void MoveToNextPoint()
-        {
-            float angle = frand(0, 2 * M_PI);
-            float x = center_x + cos(angle) * radius;
-            float y = center_y + sin(angle) * radius;
-
-            me->GetMotionMaster()->MovePoint(1, x, y, me->GetPositionZ(), true);
-        }
-
-        void MovementInform(uint32 type, uint32 pointId) override
-        {
-            if (type == POINT_MOTION_TYPE && pointId == 1)
-            {
-                moveTimer = 1;
-            }
-        }
-
-        void UpdateAI(uint32 diff) override
-        {
-            if (moveTimer <= diff)
-            {
-                MoveToNextPoint();
-                moveTimer = 1000;
-            }
-            else
-            {
-                moveTimer -= diff;
-            }
-        }
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return new npc_wandering_flame_customAI(creature);
-    }
-};
-
 void AddSC_blackrock_depths()
 {
     new go_shadowforge_brazier();
@@ -814,5 +712,4 @@ void AddSC_blackrock_depths()
     new npc_lokhtos_darkbargainer();
     new npc_rocknot();
     new ironhand_guardian();
-    new npc_wandering_flame_custom();
 }

@@ -27,12 +27,6 @@
 #include "WorldSession.h"
 //#include "WorldStatePackets.h"
 
-// Ornfelt: npcbot
-#include "bot_ai.h"
-#include "botdatamgr.h"
-#include "botmgr.h"
-//end npcbot
-
 void ArenaScore::AppendToPacket(WorldPacket& data)
 {
     data << PlayerGuid;
@@ -175,62 +169,6 @@ void Arena::HandleKillPlayer(Player* player, Player* killer)
     CheckWinConditions();
 }
 
-// Ornfelt: npcbot
-void Arena::AddBot(Creature* bot)
-{
-    ObjectGuid guid = bot->GetGUID();
-    TeamId teamId = BotDataMgr::GetTeamIdForFaction(bot->GetFaction());
-
-    Battleground::AddBot(bot);
-    PlayerScores.emplace(bot->GetGUID().GetCounter(), new ArenaScore(bot->GetGUID(), teamId));
-
-    if (teamId == TEAM_ALLIANCE) // gold
-    {
-        if (teamId == TEAM_HORDE)
-            bot->CastSpell(bot, SPELL_HORDE_GOLD_FLAG, true);
-        else
-            bot->CastSpell(bot, SPELL_ALLIANCE_GOLD_FLAG, true);
-    }
-    else // green
-    {
-        if (teamId == TEAM_HORDE)
-            bot->CastSpell(bot, SPELL_HORDE_GREEN_FLAG, true);
-        else
-            bot->CastSpell(bot, SPELL_ALLIANCE_GREEN_FLAG, true);
-    }
-
-    UpdateArenaWorldState();
-}
-
-void Arena::HandleBotKillPlayer(Creature* killer, Player* victim)
-{
-    if (GetStatus() != STATUS_IN_PROGRESS)
-        return;
-
-    Battleground::HandleBotKillPlayer(killer, victim);
-    UpdateArenaWorldState();
-    CheckWinConditions();
-}
-void Arena::HandleBotKillBot(Creature* killer, Creature* victim)
-{
-    if (GetStatus() != STATUS_IN_PROGRESS)
-        return;
-
-    Battleground::HandleBotKillBot(killer, victim);
-    UpdateArenaWorldState();
-    CheckWinConditions();
-}
-void Arena::HandlePlayerKillBot(Creature* victim, Player* killer)
-{
-    if (GetStatus() != STATUS_IN_PROGRESS)
-        return;
-
-    Battleground::HandlePlayerKillBot(victim, killer);
-    UpdateArenaWorldState();
-    CheckWinConditions();
-}
-//end npcbot
-
 void Arena::RemovePlayerAtLeave(Player* player)
 {
     if (isRated() && GetStatus() == STATUS_IN_PROGRESS)
@@ -254,6 +192,9 @@ void Arena::RemovePlayerAtLeave(Player* player)
 
 void Arena::CheckWinConditions()
 {
+    if (!sScriptMgr->OnBeforeArenaCheckWinConditions(this))
+        return;
+
     if (!GetAlivePlayersCountByTeam(TEAM_ALLIANCE) && GetPlayersCountByTeam(TEAM_HORDE))
         EndBattleground(TEAM_HORDE);
     else if (GetPlayersCountByTeam(TEAM_ALLIANCE) && !GetAlivePlayersCountByTeam(TEAM_HORDE))

@@ -15,6 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "temple_of_ahnqiraj.h"
 #include "AreaTriggerScript.h"
 #include "CreatureScript.h"
 #include "MapReference.h"
@@ -22,7 +23,6 @@
 #include "ScriptedCreature.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
-#include "temple_of_ahnqiraj.h"
 
 enum Spells
 {
@@ -240,59 +240,35 @@ struct npc_obsidian_eradicator : public ScriptedAI
     void JustEngagedWith(Unit* /*who*/) override
     {
         scheduler.Schedule(3500ms, [this](TaskContext context)
+        {
+            if (_targetGUIDs.empty())
             {
-                if (_targetGUIDs.empty())
+                me->GetMap()->DoForAllPlayers([&](Player* player)
                 {
-                    // Find players and NPCBots within the map
-                    std::list<Unit*> targets;
-                    Acore::AnyUnitInObjectRangeCheck check(me, 100.0f); // Assuming you want to check the entire map range
-                    Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
-                    Cell::VisitAllObjects(me, searcher, 100.0f); // Assuming you want to check the entire map range
-
-                    // Filter out targets that do not match the criteria
-                    targets.remove_if([this](Unit* unit) -> bool {
-                        if (unit->IsAlive() && unit->GetPower(POWER_MANA) > 0)
-                        {
-                            if (unit->GetTypeId() == TYPEID_PLAYER)
-                            {
-                                Player* player = unit->ToPlayer();
-                                return player->IsGameMaster() || player->IsSpectator();
-                            }
-                            else if (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot())
-                            {
-                                return false;
-                            }
-                        }
-                        return true;
-                        });
-
-                    // Collect GUIDs of valid targets
-                    for (Unit* target : targets)
+                    if (player->IsAlive() && !player->IsGameMaster() && !player->IsSpectator() && player->GetPower(POWER_MANA) > 0)
                     {
-                        _targetGUIDs.push_back(target->GetGUID());
+                        _targetGUIDs.push_back(player->GetGUID());
                     }
+                });
 
-                    // Randomly resize the list to a maximum of 10 targets
-                    Acore::Containers::RandomResize(_targetGUIDs, 10);
-                }
+                Acore::Containers::RandomResize(_targetGUIDs, 10);
+            }
 
-                // Cast the mana drain spell on each target
-                for (ObjectGuid guid : _targetGUIDs)
+            for (ObjectGuid guid : _targetGUIDs)
+            {
+                if (Unit* target = ObjectAccessor::GetUnit(*me, guid))
                 {
-                    if (Unit* target = ObjectAccessor::GetUnit(*me, guid))
-                    {
-                        DoCast(target, SPELL_DRAIN_MANA_ERADICATOR, true);
-                    }
+                    DoCast(target, SPELL_DRAIN_MANA_ERADICATOR, true);
                 }
+            }
 
-                // If mana is full, cast the shock blast spell
-                if (me->GetPowerPct(POWER_MANA) >= 100.f)
-                {
-                    DoCastAOE(SPELL_SHOCK_BLAST);
-                }
+            if (me->GetPowerPct(POWER_MANA) >= 100.f)
+            {
+                DoCastAOE(SPELL_SHOCK_BLAST);
+            }
 
-                context.Repeat(3500ms);
-            });
+            context.Repeat(3500ms);
+        });
     }
 
     void UpdateAI(uint32 diff) override
@@ -599,4 +575,3 @@ void AddSC_temple_of_ahnqiraj()
     RegisterSpellScript(spell_nullify);
     new at_battleguard_sartura();
 }
-

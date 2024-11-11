@@ -129,17 +129,17 @@ public:
 
         void SummonArchers()
         {
-            me->SummonCreature(NPC_SCOURGE_ARCHER, 3330.18f, -3078.97f, 176.814f, 0.799463f);
-            me->SummonCreature(NPC_SCOURGE_ARCHER, 3328.34f, -3017.88f, 176.544f, 6.26976f);
-            me->SummonCreature(NPC_SCOURGE_ARCHER, 3333.71f, -3052.4f, 178.171f, 0.391055f);
-            me->SummonCreature(NPC_SCOURGE_ARCHER, 3316.22f, -3035.49f, 171.428f, 0.163288f);
-            me->SummonCreature(NPC_SCOURGE_ARCHER, 3371.54f, -3067.75f, 179.942f, 1.96578f);
-            me->SummonCreature(NPC_SCOURGE_ARCHER, 3379.39f, -3060.11f, 186.617f, 2.82186f);
-            me->SummonCreature(NPC_SCOURGE_ARCHER, 3352.44f, -3079.01f, 184.07f, 1.32175f);
-            me->SummonCreature(NPC_SCOURGE_ARCHER, 3363.07f, -3077.43f, 188.0f, 1.78121f);
-            me->SummonCreature(NPC_SCOURGE_ARCHER, 3348.11f, -2991.02f, 177.304f, 4.07064f);
-            me->SummonCreature(NPC_SCOURGE_ARCHER, 3377.42f, -3039.77f, 177.594f, 3.20671f);
-            me->SummonCreature(NPC_SCOURGE_ARCHER, 3363.87f, -3010.4f, 190.387f, 3.81932f);
+            me->SummonCreature(NPC_SCOURGE_ARCHER, 3330.18f, -3078.97f, 171.814f, 0.799463f);
+            me->SummonCreature(NPC_SCOURGE_ARCHER, 3328.34f, -3017.88f, 171.544f, 6.26976f);
+            me->SummonCreature(NPC_SCOURGE_ARCHER, 3333.71f, -3052.4f, 174.171f, 0.391055f);
+            me->SummonCreature(NPC_SCOURGE_ARCHER, 3316.22f, -3035.49f, 166.428f, 0.163288f);
+            me->SummonCreature(NPC_SCOURGE_ARCHER, 3371.54f, -3067.75f, 174.942f, 1.96578f);
+            me->SummonCreature(NPC_SCOURGE_ARCHER, 3379.39f, -3060.11f, 181.617f, 2.82186f);
+            me->SummonCreature(NPC_SCOURGE_ARCHER, 3352.44f, -3079.01f, 179.07f, 1.32175f);
+            me->SummonCreature(NPC_SCOURGE_ARCHER, 3363.07f, -3077.43f, 183.0f, 1.78121f);
+            me->SummonCreature(NPC_SCOURGE_ARCHER, 3348.11f, -2991.02f, 172.304f, 4.07064f);
+            me->SummonCreature(NPC_SCOURGE_ARCHER, 3377.42f, -3039.77f, 172.594f, 3.20671f);
+            me->SummonCreature(NPC_SCOURGE_ARCHER, 3363.87f, -3010.4f, 185.387f, 3.81932f);
         }
 
         void SummonPeasants()

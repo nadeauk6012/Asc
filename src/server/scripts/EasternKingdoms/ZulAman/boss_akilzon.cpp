@@ -25,7 +25,6 @@ SQLUpdate:
 EndScriptData */
 
 #include "Cell.h"
-#include "CellImpl.h"
 #include "CreatureScript.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
@@ -86,7 +85,7 @@ public:
 
     struct boss_akilzonAI : public BossAI
     {
-        boss_akilzonAI(Creature* creature) : BossAI(creature, DATA_AKILZONEVENT)
+        boss_akilzonAI(Creature* creature) : BossAI(creature, DATA_AKILZON)
         {
         }
 
@@ -104,9 +103,6 @@ public:
             StormCount = 0;
             isRaining = false;
 
-            if (instance)
-                instance->SetData(DATA_AKILZONEVENT, NOT_STARTED);
-
             SetWeather(WEATHER_STATE_FINE, 0.0f);
         }
 
@@ -121,22 +117,17 @@ public:
 
             Talk(SAY_AGGRO);
             //DoZoneInCombat();
-
-            if (instance)
-                instance->SetData(DATA_AKILZONEVENT, IN_PROGRESS);
         }
 
         void JustDied(Unit* /*killer*/) override
         {
             Talk(SAY_DEATH);
             _JustDied();
-            if (instance)
-                instance->SetData(DATA_AKILZONEVENT, DONE);
         }
 
         void KilledUnit(Unit* who) override
         {
-            if (who->GetTypeId() == TYPEID_PLAYER)
+            if (who->IsPlayer())
                 Talk(SAY_KILL);
         }
 
@@ -235,7 +226,7 @@ public:
                                 me->SetInFront(me->GetVictim());
                             }
                             /*if (float dist = me->IsWithinDist3d(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 5.0f) dist = 5.0f;
-                            SDisruptAOEVisual_Timer = 1000 + floor(dist / 30 * 1000.0f);*/
+                            SDisruptAOEVisual_Timer = 1000 + std::floor(dist / 30 * 1000.0f);*/
                             events.ScheduleEvent(EVENT_STATIC_DISRUPTION, urand(10000, 18000));
                             break;
                         }

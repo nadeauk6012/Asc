@@ -26,6 +26,7 @@
 #include "SpellScriptLoader.h"
 #include "TaskScheduler.h"
 #include "karazhan.h"
+#include "SpellMgr.h"
 
 enum Texts
 {
@@ -73,7 +74,11 @@ enum Spells
 
     SPELL_SHADOW_PYRO            = 29978,
 
-    SPELL_ATIESH_VISUAL          = 31796
+    SPELL_ATIESH_VISUAL          = 31796,
+
+    SPELL_CURSE_OF_TONGUE_RANK1  = 1714,
+    SPELL_CURSE_OF_TONGUE_RANK2  = 11719,
+    SPELL_MIND_NUMBING_POISON    = 5760
 };
 
 enum Creatures
@@ -100,6 +105,8 @@ enum Misc
 
 Position const roomCenter = {-11158.f, -1920.f};
 
+std::vector<uint32> immuneSpells = { SPELL_CURSE_OF_TONGUE_RANK1, SPELL_CURSE_OF_TONGUE_RANK2, SPELL_MIND_NUMBING_POISON };
+
 struct boss_shade_of_aran : public BossAI
 {
     boss_shade_of_aran(Creature* creature) : BossAI(creature, DATA_ARAN), _atieshReaction(false) { }
@@ -117,6 +124,9 @@ struct boss_shade_of_aran : public BossAI
 
         _drinking = false;
         _hasDrunk = false;
+
+        for (auto spell : immuneSpells)
+            me->ApplySpellImmune(0, IMMUNITY_ID, spell, true);
 
         if (GameObject* libraryDoor = instance->instance->GetGameObject(instance->GetGuidData(DATA_GO_LIBRARY_DOOR)))
         {
@@ -269,7 +279,7 @@ struct boss_shade_of_aran : public BossAI
                     // If we are able to cast spells, cast them.
                     _currentNormalSpell = Acore::Containers::SelectRandomContainerElement(normalSpells);
 
-                    CastSpellOnRandomTarget(_currentNormalSpell, 100.0f);
+                    DoCastRandomTarget(_currentNormalSpell, 0, 100.0f);
                     if (me->GetVictim())
                     {
                         me->GetMotionMaster()->MoveChase(me->GetVictim(), 45.0f);
@@ -373,24 +383,6 @@ struct boss_shade_of_aran : public BossAI
 
         if (!_drinking)
             DoMeleeAttackIfReady();
-    }
-
-    void CastSpellOnRandomTarget(uint32 spellId, float range)
-    {
-        std::list<Unit*> targets;
-        Acore::AnyUnitInObjectRangeCheck check(me, range);
-        Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(me, targets, check);
-        Cell::VisitAllObjects(me, searcher, range);
-
-        targets.remove_if([this](Unit* unit) -> bool {
-            return !unit->IsAlive() || !(unit->GetTypeId() == TYPEID_PLAYER || (unit->GetTypeId() == TYPEID_UNIT && static_cast<Creature*>(unit)->IsNPCBot()));
-            });
-
-        if (!targets.empty())
-        {
-            Unit* target = Acore::Containers::SelectRandomContainerElement(targets);
-            DoCast(target, spellId);
-        }
     }
 
 private:
@@ -511,4 +503,3 @@ void AddSC_boss_shade_of_aran()
     RegisterSpellScript(spell_flamewreath_aura);
     new at_karazhan_atiesh_aran();
 }
-

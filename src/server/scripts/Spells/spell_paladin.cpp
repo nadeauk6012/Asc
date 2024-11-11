@@ -15,27 +15,18 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * Scripts for spells with SPELLFAMILY_PALADIN and SPELLFAMILY_GENERIC spells used by paladin players.
- * Ordered alphabetically using scriptname.
- * Scriptnames of files in this file should be prefixed with "spell_pal_".
- */
-
-#include "CreatureScript.h"
 #include "Group.h"
 #include "Player.h"
-#include "ScriptMgr.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 #include "UnitAI.h"
-#include "Spell.h"
-
-
-//npcbot
-#include "Creature.h"
-//end npcbot
+/*
+ * Scripts for spells with SPELLFAMILY_PALADIN and SPELLFAMILY_GENERIC spells used by paladin players.
+ * Ordered alphabetically using scriptname.
+ * Scriptnames of files in this file should be prefixed with "spell_pal_".
+ */
 
 enum PaladinSpells
 {
@@ -53,7 +44,6 @@ enum PaladinSpells
     SPELL_PALADIN_BLESSING_OF_LOWER_CITY_SHAMAN  = 37881,
 
     SPELL_PALADIN_DIVINE_STORM                   = 53385,
-    SPELL_PALADIN_DIVINE_STORM_SECOND            = 800026,
     SPELL_PALADIN_DIVINE_STORM_DUMMY             = 54171,
     SPELL_PALADIN_DIVINE_STORM_HEAL              = 54172,
 
@@ -100,62 +90,18 @@ enum PaladinSpells
 
     // Crystalforge Raiment - Tier 5 Holy 2 Set
     SPELL_IMPROVED_JUDGEMENT                     = 37188,
-    SPELL_IMPROVED_JUDGEMENT_ENERGIZE            = 43838
+    SPELL_IMPROVED_JUDGEMENT_ENERGIZE            = 43838,
+
+    SPELL_PALADIN_HOLY_VENGEANCE                 = 31803,
+    SPELL_PALADIN_BLOOD_CORRUPTION               = 53742,
+    SPELL_PALADIN_SEAL_OF_VENGEANCE_EFFECT       = 42463,
+    SPELL_PALADIN_SEAL_OF_CORRUPTION_EFFECT      = 53739
 };
 
 enum PaladinSpellIcons
 {
     PALADIN_ICON_ID_RETRIBUTION_AURA             = 555
 };
-
-class dual_crusader : public PlayerScript
-{
-public:
-    dual_crusader() : PlayerScript("dual_crusader") { }
-
-    uint32 CRUSADER_STRIKE_SPELL_ID = 35395;
-    uint32 DIVINE_STORM_SPELL_ID = 53385;
-    uint32 CRUSADER_STRIKE_ADDITIONAL_SPELL_ID = 8000025;
-    uint32 DIVINE_STORM_ADDITIONAL_SPELL_ID = 800026;
-
-    void OnSpellCast(Player* player, Spell* spell, bool skipCheck) override
-    {
-        if (player->getClass() != CLASS_PALADIN)
-        {
-            return;
-        }
-
-        uint32 spellId = spell->GetSpellInfo()->Id;
-        if (spellId != CRUSADER_STRIKE_SPELL_ID && spellId != DIVINE_STORM_SPELL_ID)
-        {
-            return;
-        }
-
-        // Check if the player has both mainhand and offhand weapons equipped
-        Item* mainhandItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
-        Item* offhandItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
-
-        if (mainhandItem && mainhandItem->GetTemplate()->Class == ITEM_CLASS_WEAPON &&
-            offhandItem && offhandItem->GetTemplate()->Class == ITEM_CLASS_WEAPON)
-        {
-            // Get the player's target
-            if (Unit* target = player->GetSelectedUnit())
-            {
-                // Determine the additional spell to cast based on the main spell cast
-                uint32 additionalSpellId = (spellId == CRUSADER_STRIKE_SPELL_ID) ? CRUSADER_STRIKE_ADDITIONAL_SPELL_ID : DIVINE_STORM_ADDITIONAL_SPELL_ID;
-
-                // Cast the additional spell on the target as a triggered (free and instant) cast
-                player->CastSpell(target, additionalSpellId, true);
-            }
-        }
-    }
-};
-
-void AddSC_dual_crusader()
-{
-    new dual_crusader();
-}
-
 
 class spell_pal_seal_of_command_aura : public AuraScript
 {
@@ -232,7 +178,7 @@ class spell_pal_divine_intervention : public AuraScript
 
     void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        if (!GetTarget()->IsInCombat() && GetTarget()->GetTypeId() == TYPEID_PLAYER)
+        if (!GetTarget()->IsInCombat() && GetTarget()->IsPlayer())
             GetTarget()->RemoveAurasDueToSpell(GetTarget()->ToPlayer()->GetTeamId() == TEAM_ALLIANCE ? 57723 : 57724);
     }
 
@@ -383,13 +329,7 @@ private:
     {
         healPct = GetSpellInfo()->Effects[EFFECT_1].CalcValue();
         absorbPct = GetSpellInfo()->Effects[EFFECT_0].CalcValue();
-
-        //npcbot - allow for npcbots
-        if (GetUnitOwner()->IsNPCBot())
-            return true;
-        //end npcbot
-
-        return GetUnitOwner()->GetTypeId() == TYPEID_PLAYER;
+        return GetUnitOwner()->IsPlayer();
     }
 
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
@@ -403,39 +343,6 @@ private:
         Unit* victim = GetTarget();
         int32 remainingHealth = victim->GetHealth() - dmgInfo.GetDamage();
         uint32 allowedHealth = victim->CountPctFromMaxHealth(35);
-
-        //npcbot - calc for bots
-        if (victim->GetTypeId() == TYPEID_UNIT/* && victim->ToCreature()->IsNPCBot()*/)
-        {
-            if (remainingHealth <= 0 && !victim->HasSpellCooldown(PAL_SPELL_ARDENT_DEFENDER_HEAL) &&
-                !victim->ToCreature()->HasSpellCooldown(PAL_SPELL_ARDENT_DEFENDER_HEAL))
-            {
-                // Cast healing spell, completely avoid damage
-                absorbAmount = dmgInfo.GetDamage();
-
-                float defenseSkillValue = victim->GetDefenseSkillValue();
-                // Max heal when defense skill denies critical hits from raid bosses
-                // Formula: max defense at level + 140 (rating from gear)
-                float reqDefForMaxHeal = victim->GetMaxSkillValueForLevel() + 140.0f;
-                float defenseFactor = std::min(1.0f, defenseSkillValue / reqDefForMaxHeal);
-
-                int32 healAmount = int32(victim->CountPctFromMaxHealth(uint32(healPct * defenseFactor)));
-                victim->CastCustomSpell(PAL_SPELL_ARDENT_DEFENDER_HEAL, SPELLVALUE_BASE_POINT0, healAmount, victim, true, nullptr, aurEff);
-                victim->ToCreature()->AddBotSpellCooldown(PAL_SPELL_ARDENT_DEFENDER_HEAL, 120000);
-            }
-            else if (remainingHealth < int32(allowedHealth))
-            {
-                // Reduce damage that brings us under 35% (or full damage if we are already under 35%) by x%
-                uint32 damageToReduce = (victim->GetHealth() < allowedHealth)
-                    ? dmgInfo.GetDamage()
-                    : allowedHealth - remainingHealth;
-                absorbAmount = CalculatePct(damageToReduce, absorbPct);
-            }
-
-            return;
-        }
-        //end npcbot
-
         // If damage kills us
         if (remainingHealth <= 0 && !victim->ToPlayer()->HasAura(PAL_SPELL_ARDENT_DEFENDER_DEBUFF))
         {
@@ -611,24 +518,7 @@ class spell_pal_divine_sacrifice : public AuraScript
     {
         if (Unit* caster = GetCaster())
         {
-            //npcbot: handle for bots
-            if (caster->IsNPCBot())
-            {
-                Player const* owner = caster->ToCreature()->GetBotOwner();
-                if (!owner || owner->GetTypeId() != TYPEID_PLAYER)
-                    return false;
-
-                if (owner->GetGroup())
-                    groupSize = owner->GetGroup()->GetMembersCount();
-                else
-                    groupSize = 1 + owner->GetNpcBotsCount();
-
-                remainingAmount = (caster->CountPctFromMaxHealth(GetSpellInfo()->Effects[EFFECT_2].CalcValue(caster)) * groupSize);
-                minHpPct = GetSpellInfo()->Effects[EFFECT_1].CalcValue(caster);
-                return true;
-            }
-            //end npcbot
-            if (caster->GetTypeId() == TYPEID_PLAYER)
+            if (caster->IsPlayer())
             {
                 if (caster->ToPlayer()->GetGroup())
                     groupSize = caster->ToPlayer()->GetGroup()->GetMembersCount();
@@ -661,7 +551,6 @@ class spell_pal_divine_sacrifice : public AuraScript
 };
 
 // 53385 - Divine Storm
-
 class spell_pal_divine_storm : public SpellScript
 {
     PrepareSpellScript(spell_pal_divine_storm);
@@ -676,9 +565,7 @@ class spell_pal_divine_storm : public SpellScript
     bool Load() override
     {
         healPct = GetSpellInfo()->Effects[EFFECT_1].CalcValue(GetCaster());
-
-        // Ensure the script applies to both Divine Storm spell IDs
-        return GetSpellInfo()->Id == SPELL_PALADIN_DIVINE_STORM || GetSpellInfo()->Id == SPELL_PALADIN_DIVINE_STORM_SECOND;
+        return true;
     }
 
     void TriggerHeal()
@@ -693,7 +580,6 @@ class spell_pal_divine_storm : public SpellScript
         AfterHit += SpellHitFn(spell_pal_divine_storm::TriggerHeal);
     }
 };
-
 
 // 54171 - Divine Storm (Dummy)
 class spell_pal_divine_storm_dummy : public SpellScript
@@ -1135,10 +1021,7 @@ class spell_pal_righteous_defense : public SpellScript
     SpellCastResult CheckCast()
     {
         Unit* caster = GetCaster();
-        if (caster->GetTypeId() != TYPEID_PLAYER)
-            //npcbot: this player check makes no sense
-            if (!caster->IsNPCBot())
-            //end npcbot
+        if (!caster->IsPlayer())
             return SPELL_FAILED_DONT_REPORT;
 
         if (Unit* target = GetExplTargetUnit())
@@ -1227,30 +1110,42 @@ class spell_pal_seal_of_righteousness : public AuraScript
     }
 };
 
-class spell_pal_crusader_strike : public SpellScript
+// 42463 - Seal of Vengeance
+// 53739 - Seal of Corruption
+class spell_pal_seal_of_vengeance : public SpellScript
 {
-    PrepareSpellScript(spell_pal_crusader_strike);
+    PrepareSpellScript(spell_pal_seal_of_vengeance);
 
-    void HandleOnHit()
+    bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        Unit* caster = GetCaster();
-        if (!caster || !caster->HasAura(888051)) // Check if caster has the required aura
-            return;
+        return ValidateSpellInfo({ SPELL_PALADIN_SEAL_OF_VENGEANCE_EFFECT, SPELL_PALADIN_SEAL_OF_CORRUPTION_EFFECT });
+    }
 
-        Unit* target = GetHitUnit();
-        if (!target)
-            return;
-
+    void HandleScriptEffect(SpellEffIndex /*effIndex*/)
+    {
+        Unit* target = GetExplTargetUnit();
+        uint32 spellId = GetSpell()->GetSpellInfo()->Id;
+        uint32 auraId = (spellId == SPELL_PALADIN_SEAL_OF_VENGEANCE_EFFECT)
+            ? SPELL_PALADIN_HOLY_VENGEANCE
+            : SPELL_PALADIN_BLOOD_CORRUPTION;
         int32 damage = GetHitDamage();
-        int32 dotDamage = CalculatePct(damage, 6.25); // 6.25% of damage for each tick
+        uint8 stacks = 0;
 
-        // Apply the DoT as a new instance each time
-        caster->CastCustomSpell(target, 888050, &dotDamage, nullptr, nullptr, true);
+        if (target)
+        {
+            Aura* aura = target->GetAura(auraId, GetCaster()->GetGUID());
+            if (aura)
+                stacks = aura->GetStackAmount();
+
+            damage = ((damage * stacks) / 5);
+
+            SetHitDamage(damage);
+        }
     }
 
     void Register() override
     {
-        OnHit += SpellHitFn(spell_pal_crusader_strike::HandleOnHit);
+        OnEffectHitTarget += SpellEffectFn(spell_pal_seal_of_vengeance::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_WEAPON_PERCENT_DAMAGE);
     }
 };
 
@@ -1281,7 +1176,5 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScript(spell_pal_lay_on_hands);
     RegisterSpellScript(spell_pal_righteous_defense);
     RegisterSpellScript(spell_pal_seal_of_righteousness);
-    new dual_crusader();
-    RegisterSpellScript(spell_pal_crusader_strike);
+    RegisterSpellScript(spell_pal_seal_of_vengeance);
 }
-

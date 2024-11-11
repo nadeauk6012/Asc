@@ -23,6 +23,7 @@
 #include "DBCEnums.h"
 #include "GameObject.h"
 #include "SharedDefines.h"
+#include "World.h"
 
 class Creature;
 class GameObject;
@@ -47,11 +48,15 @@ struct GraveyardStruct;
 
 enum BattlegroundDesertionType : uint8
 {
-    BG_DESERTION_TYPE_LEAVE_BG          = 0, // player leaves the BG
-    BG_DESERTION_TYPE_OFFLINE           = 1, // player is kicked from BG because offline
-    BG_DESERTION_TYPE_LEAVE_QUEUE       = 2, // player is invited to join and refuses to do it
-    BG_DESERTION_TYPE_NO_ENTER_BUTTON   = 3, // player is invited to join and do nothing (time expires)
-    BG_DESERTION_TYPE_INVITE_LOGOUT     = 4, // player is invited to join and logs out
+    BG_DESERTION_TYPE_LEAVE_BG           = 0, // player leaves the BG
+    BG_DESERTION_TYPE_OFFLINE            = 1, // player is kicked from BG because offline
+    BG_DESERTION_TYPE_LEAVE_QUEUE        = 2, // player is invited to join and refuses to do it
+    BG_DESERTION_TYPE_NO_ENTER_BUTTON    = 3, // player is invited to join and do nothing (time expires)
+    BG_DESERTION_TYPE_INVITE_LOGOUT      = 4, // player is invited to join and logs out
+    ARENA_DESERTION_TYPE_LEAVE_BG        = 5, // player leaves the Arena
+    ARENA_DESERTION_TYPE_LEAVE_QUEUE     = 6, // player is invited to join arena and refuses to do it
+    ARENA_DESERTION_TYPE_NO_ENTER_BUTTON = 7, // player is invited to join arena and do nothing (time expires)
+    ARENA_DESERTION_TYPE_INVITE_LOGOUT   = 8, // player is invited to join arena and logs out
 };
 
 enum BattlegroundMaps
@@ -171,7 +176,7 @@ enum BattlegroundTimeIntervals
 
 enum BattlegroundStartTimeIntervals
 {
-    BG_START_DELAY_2M               = 60000,                // ms (1 minute)
+    BG_START_DELAY_2M               = 120000,               // ms (2 minutes)
     BG_START_DELAY_1M               = 60000,                // ms (1 minute)
     BG_START_DELAY_30S              = 30000,                // ms (30 seconds)
     BG_START_DELAY_15S              = 15000,                // ms (15 seconds) Used only in arena
@@ -197,13 +202,6 @@ enum BattlegroundStatus
     STATUS_IN_PROGRESS              = 3,                     // means bg is running
     STATUS_WAIT_LEAVE               = 4                      // means some faction has won BG and it is ending
 };
-
-//npcbot
-struct BattlegroundBot
-{
-    TeamId Team;                                             // bot's team
-};
-//end npcbot
 
 struct BattlegroundObjectInfo
 {
@@ -340,8 +338,20 @@ public:
     [[nodiscard]] uint32 GetMinLevel() const          { return m_LevelMin; }
     [[nodiscard]] uint32 GetMaxLevel() const          { return m_LevelMax; }
 
+    [[nodiscard]] bool isTemplate() const             { return m_IsTemplate; }
+    [[nodiscard]] bool isMaxLevel() const
+    {
+        // NOTE: this only works when the BG is not a template but the real BG
+        auto maxPlayerLevel = sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
+        return GetMinLevel() <= maxPlayerLevel && maxPlayerLevel <= GetMaxLevel();
+    }
+
     [[nodiscard]] uint32 GetMaxPlayersPerTeam() const { return m_MaxPlayersPerTeam; }
-    [[nodiscard]] uint32 GetMinPlayersPerTeam() const { return m_MinPlayersPerTeam; }
+    [[nodiscard]] uint32 GetMinPlayersPerTeam() const
+    {
+        auto lowLevelsOverride = sWorld->getIntConfig(CONFIG_BATTLEGROUND_OVERRIDE_LOWLEVELS_MINPLAYERS);
+        return (lowLevelsOverride && !isTemplate() && !isMaxLevel() && !isArena()) ? lowLevelsOverride : m_MinPlayersPerTeam;
+    }
 
     [[nodiscard]] int32 GetStartDelayTime() const     { return m_StartDelayTime; }
     [[nodiscard]] uint8 GetArenaType() const          { return m_ArenaType; }
@@ -350,7 +360,7 @@ public:
     [[nodiscard]] uint32 GetBonusHonorFromKill(uint32 kills) const;
 
     // Spirit of Competition event
-    bool SpiritofCompetitionEvent(PvPTeamId winnerTeamId);
+    void SpiritOfCompetitionEvent(PvPTeamId winnerTeamId) const;
 
     bool IsRandom() { return m_IsRandom; }
 
@@ -405,10 +415,6 @@ public:
     [[nodiscard]] bool isRated() const        { return m_IsRated; }
 
     typedef std::map<ObjectGuid, Player*> BattlegroundPlayerMap;
-    //npcbot
-    typedef std::map<ObjectGuid, BattlegroundBot> BattlegroundBotMap;
-    [[nodiscard]] BattlegroundBotMap const& GetBots() const { return m_Bots; }
-    //end npcbot
     [[nodiscard]] BattlegroundPlayerMap const& GetPlayers() const { return m_Players; }
     [[nodiscard]] uint32 GetPlayersSize() const { return m_Players.size(); }
 
@@ -481,13 +487,6 @@ public:
 
     void BlockMovement(Player* player);
 
-    void SendWarningToAll(uint32 entry, ...);
-    void SendMessageToAll(uint32 entry, ChatMsg type, Player const* source = nullptr);
-    void PSendMessageToAll(uint32 entry, ChatMsg type, Player const* source, ...);
-
-    // specialized version with 2 string id args
-    void SendMessage2ToAll(uint32 entry, ChatMsg type, Player const* source, uint32 strId1 = 0, uint32 strId2 = 0);
-
     // Raid Group
     [[nodiscard]] Group* GetBgRaid(TeamId teamId) const { return m_BgRaids[teamId]; }
     void SetBgRaid(TeamId teamId, Group* bg_raid);
@@ -537,28 +536,6 @@ public:
     virtual void AddPlayer(Player* player);                // must be implemented in BG subclass
 
     void AddOrSetPlayerToCorrectBgGroup(Player* player, TeamId teamId);
-
-    //npcbot
-    [[nodiscard]] std::size_t GetBotScoresSize() const { return BotScores.size(); }
-    void RemoveBotFromResurrectQueue(ObjectGuid guid);
-    virtual void AddBot(Creature* bot);
-    virtual void RemoveBotAtLeave(ObjectGuid guid);
-    virtual bool UpdateBotScore(Creature const* bot, uint32 type, uint32 value);
-    void AddOrSetBotToCorrectBgGroup(Creature* bot, TeamId teamId);
-    void RewardXPAtKill(Player* killer, Creature* victim);
-    void RewardXPAtKill(Creature* killer, Player* victim);
-    void RewardXPAtKill(Creature* killer, Creature* victim);
-    virtual void HandleBotKillPlayer(Creature* killer, Player* victim);
-    virtual void HandleBotKillBot(Creature* killer, Creature* victim);
-    virtual void HandlePlayerKillBot(Creature* victim, Player* killer);
-    virtual void HandleBotKillUnit(Creature* /*killer*/, Creature* /*victim*/) { }
-    TeamId GetBotTeamId(ObjectGuid guid) const;
-    virtual GraveyardStruct const* GetClosestGraveyardForBot(Creature* bot) const;
-    virtual void RemoveBot(ObjectGuid /*guid*/) {}
-    virtual void EventBotDroppedFlag(Creature* /*bot*/) { }
-    virtual void EventBotClickedOnFlag(Creature* /*bot*/, GameObject* /*target_obj*/) { }
-    virtual void HandleBotAreaTrigger(Creature* /*bot*/, uint32 /*trigger*/) { }
-    //end npcbot
 
     virtual void RemovePlayerAtLeave(Player* player);
     // can be extended in in BG subclass
@@ -650,10 +627,6 @@ protected:
 
     // Scorekeeping
     BattlegroundScoreMap PlayerScores;                // Player scores
-    //npcbot
-    BattlegroundScoreMap BotScores;
-    BattlegroundBotMap m_Bots;
-    //end npcbot
     // must be implemented in BG subclass
     virtual void RemovePlayer(Player* /*player*/) {}
 
@@ -698,6 +671,7 @@ private:
     bool   _InBGFreeSlotQueue{ false };                // used to make sure that BG is only once inserted into the BattlegroundMgr.BGFreeSlotQueue[bgTypeId] deque
     bool   m_SetDeleteThis;                             // used for safe deletion of the bg after end / all players leave
     bool   m_IsArena;
+    bool   m_IsTemplate;
     PvPTeamId m_WinnerId;
     int32  m_StartDelayTime;
     bool   m_IsRated;                                   // is this battle rated?

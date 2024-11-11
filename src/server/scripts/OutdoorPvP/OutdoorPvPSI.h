@@ -28,7 +28,7 @@ enum OutdoorPvPSISpells
     SI_CENARION_FAVOR = 30754
 };
 
-const uint32 SI_MAX_RESOURCES = 20;
+const uint32 SI_MAX_RESOURCES = 200;
 
 const uint8 OutdoorPvPSIBuffZonesNum = 3;
 

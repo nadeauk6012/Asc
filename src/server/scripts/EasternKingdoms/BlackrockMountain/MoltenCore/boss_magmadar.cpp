@@ -23,29 +23,26 @@
 
 enum Texts
 {
-    EMOTE_FRENZY = 0,
+    EMOTE_FRENZY                    = 0,
 };
 
 enum Spells
 {
-    SPELL_FRENZY = 19451,
-    SPELL_PANIC = 19408,
-    SPELL_LAVA_BOMB = 19411,
-    SPELL_LAVA_BOMB_RANGED = 20474,
-    SPELL_LAVA_BOMB_EFFECT = 20494,                    // Spawns trap GO 177704 which triggers 19428
-    SPELL_SUMMON_CORE_HOUND = 364726,
-    SPELL_ENRAGE = 27680,
-    SPELL_LAVA_BOMB_RANGED_EFFECT = 20495,                    // Spawns trap GO 177704 which triggers 19428
+    SPELL_FRENZY                    = 19451,
+    SPELL_MAGMA_SPIT                = 19449,
+    SPELL_PANIC                     = 19408,
+    SPELL_LAVA_BOMB                 = 19411,                    // This calls a dummy server side effect that cast spell 20494 to spawn GO 177704 for 30s
+    SPELL_LAVA_BOMB_EFFECT          = 20494,                    // Spawns trap GO 177704 which triggers 19428
+    SPELL_LAVA_BOMB_RANGED          = 20474,                    // This calls a dummy server side effect that cast spell 20495 to spawn GO 177704 for 60s
+    SPELL_LAVA_BOMB_RANGED_EFFECT   = 20495,                    // Spawns trap GO 177704 which triggers 19428
 };
 
 enum Events
 {
-    EVENT_FRENZY = 1,
+    EVENT_FRENZY                    = 1,
     EVENT_PANIC,
     EVENT_LAVA_BOMB,
     EVENT_LAVA_BOMB_RANGED,
-    EVENT_SUMMON_CORE_HOUND,
-    EVENT_ENRAGE,
 };
 
 constexpr float MELEE_TARGET_LOOKUP_DIST = 10.0f;
@@ -59,106 +56,57 @@ public:
     {
         boss_magmadarAI(Creature* creature) : BossAI(creature, DATA_MAGMADAR) {}
 
-        void DespawnCoreHounds()
-        {
-            std::list<Creature*> coreHounds;
-            me->GetCreatureListWithEntryInGrid(coreHounds, 11671, 100.0f); // Adjust the range as needed, use NPC ID 11671 for Core Hounds
-            for (Creature* coreHound : coreHounds)
-            {
-                if (coreHound->IsSummon())
-                    coreHound->DespawnOrUnsummon();
-            }
-        }
-
-        void Reset() override
-        {
-            _Reset();
-        }
-        
-        void JustExitedCombat() override
-        {
-            DespawnCoreHounds();
-            BossAI::JustExitedCombat();
-        }
-
         void JustEngagedWith(Unit* /*who*/) override
         {
             _JustEngagedWith();
-            events.ScheduleEvent(EVENT_FRENZY, urand(12000, 16000));
-            events.ScheduleEvent(EVENT_PANIC, urand(20000, 25000));
-            events.ScheduleEvent(EVENT_LAVA_BOMB, urand(8000, 10000));
-            events.ScheduleEvent(EVENT_LAVA_BOMB_RANGED, urand(9000, 12000));
-            events.ScheduleEvent(EVENT_SUMMON_CORE_HOUND, 15000);
-            events.ScheduleEvent(EVENT_ENRAGE, 300000);
+            events.ScheduleEvent(EVENT_FRENZY, 8500ms);
+            events.ScheduleEvent(EVENT_PANIC, 9500ms);
+            events.ScheduleEvent(EVENT_LAVA_BOMB, 12s);
+            events.ScheduleEvent(EVENT_LAVA_BOMB_RANGED, 15s);
         }
 
-        void JustDied(Unit* /*killer*/) override
-        {
-            _JustDied();
-            Map::PlayerList const& players = me->GetMap()->GetPlayers();
-            for (auto const& playerPair : players)
-            {
-                Player* player = playerPair.GetSource();
-                if (player)
-                {
-                    DistributeChallengeRewards(player, me, 1, false);
-                }
-            }
-        }
-        
         void ExecuteEvent(uint32 eventId) override
         {
             switch (eventId)
             {
-            case EVENT_FRENZY:
-            {
-                Talk(EMOTE_FRENZY);
-                DoCastSelf(SPELL_FRENZY);
-                events.RepeatEvent(urand(15000, 20000));
-                break;
-            }
-            case EVENT_PANIC:
-            {
-                DoCastVictim(SPELL_PANIC);
-                events.RepeatEvent(urand(31000, 38000));
-                break;
-            }
-            case EVENT_LAVA_BOMB:
-            {
-                if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, MELEE_TARGET_LOOKUP_DIST, false))
+                case EVENT_FRENZY:
                 {
-                    DoCast(target, SPELL_LAVA_BOMB);
+                    Talk(EMOTE_FRENZY);
+                    DoCastSelf(SPELL_FRENZY);
+                    events.RepeatEvent(urand(15000, 20000));
+                    break;
                 }
-                events.RepeatEvent(urand(12000, 15000));
-                break;
-            }
-            case EVENT_LAVA_BOMB_RANGED:
-            {
-                // Target selection logic for ranged lava bomb
-                std::list<Unit*> targets;
-                SelectTargetList(targets, 1, SelectTargetMethod::Random, 1, [this](Unit* target)
+                case EVENT_PANIC:
+                {
+                    DoCastVictim(SPELL_PANIC);
+                    events.RepeatEvent(urand(31000, 38000));
+                    break;
+                }
+                case EVENT_LAVA_BOMB:
+                {
+                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, MELEE_TARGET_LOOKUP_DIST, true))
                     {
-                        return target && target->GetDistance(me) > MELEE_TARGET_LOOKUP_DIST && target->GetDistance(me) < 100.0f;
+                        DoCast(target, SPELL_LAVA_BOMB);
+                    }
+
+                    events.RepeatEvent(urand(12000, 15000));
+                    break;
+                }
+                case EVENT_LAVA_BOMB_RANGED:
+                {
+                    std::list<Unit*> targets;
+                    SelectTargetList(targets, 1, SelectTargetMethod::Random, 1, [this](Unit* target)
+                    {
+                        return target && target->IsPlayer() && target->GetDistance(me) > MELEE_TARGET_LOOKUP_DIST && target->GetDistance(me) < 100.0f;
                     });
 
-                if (!targets.empty())
-                {
-                    DoCast(targets.front(), SPELL_LAVA_BOMB_RANGED);
+                    if (!targets.empty())
+                    {
+                        DoCast(targets.front() , SPELL_LAVA_BOMB_RANGED);
+                    }
+                    events.RepeatEvent(urand(12000, 15000));
+                    break;
                 }
-                events.RepeatEvent(urand(12000, 15000));
-                break;
-            }
-            case EVENT_SUMMON_CORE_HOUND:
-            {
-                DoCastSelf(SPELL_SUMMON_CORE_HOUND);
-                events.RepeatEvent(45000);
-                break;
-            }
-            case EVENT_ENRAGE:
-            {
-                DoCastSelf(SPELL_ENRAGE);
-                break;
-            }
             }
         }
     };
@@ -171,55 +119,44 @@ public:
 
 // 19411 Lava Bomb
 // 20474 Lava Bomb
-class spell_magmadar_lava_bomb : public SpellScriptLoader
+class spell_magmadar_lava_bomb : public SpellScript
 {
-public:
-    spell_magmadar_lava_bomb() : SpellScriptLoader("spell_magmadar_lava_bomb") {}
+    PrepareSpellScript(spell_magmadar_lava_bomb);
 
-    class spell_magmadar_lava_bomb_SpellScript : public SpellScript
+    bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        PrepareSpellScript(spell_magmadar_lava_bomb_SpellScript);
+        return ValidateSpellInfo({ SPELL_LAVA_BOMB_EFFECT, SPELL_LAVA_BOMB_RANGED_EFFECT });
+    }
 
-        bool Validate(SpellInfo const* /*spellInfo*/) override
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        if (Unit* target = GetHitUnit())
         {
-            return ValidateSpellInfo({ SPELL_LAVA_BOMB_EFFECT, SPELL_LAVA_BOMB_RANGED_EFFECT });
-        }
-
-        void HandleDummy(SpellEffIndex /*effIndex*/)
-        {
-            if (Unit* target = GetHitUnit())
+            uint32 spellId = 0;
+            switch (m_scriptSpellId)
             {
-                uint32 spellId = 0;
-                switch (m_scriptSpellId)
+                case SPELL_LAVA_BOMB:
                 {
-                    case SPELL_LAVA_BOMB:
-                    {
-                        spellId = SPELL_LAVA_BOMB_EFFECT;
-                        break;
-                    }
-                    case SPELL_LAVA_BOMB_RANGED:
-                    {
-                        spellId = SPELL_LAVA_BOMB_RANGED_EFFECT;
-                        break;
-                    }
-                    default:
-                    {
-                        return;
-                    }
+                    spellId = SPELL_LAVA_BOMB_EFFECT;
+                    break;
                 }
-                target->CastSpell(target, spellId, true, nullptr, nullptr, GetCaster()->GetGUID());
+                case SPELL_LAVA_BOMB_RANGED:
+                {
+                    spellId = SPELL_LAVA_BOMB_RANGED_EFFECT;
+                    break;
+                }
+                default:
+                {
+                    return;
+                }
             }
+            target->CastSpell(target, spellId, true, nullptr, nullptr, GetCaster()->GetGUID());
         }
+    }
 
-        void Register() override
-        {
-            OnEffectHitTarget += SpellEffectFn(spell_magmadar_lava_bomb_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
-        }
-    };
-
-    SpellScript* GetSpellScript() const override
+    void Register() override
     {
-        return new spell_magmadar_lava_bomb_SpellScript();
+        OnEffectHitTarget += SpellEffectFn(spell_magmadar_lava_bomb::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 };
 
@@ -228,6 +165,5 @@ void AddSC_boss_magmadar()
     new boss_magmadar();
 
     // Spells
-    new spell_magmadar_lava_bomb();
+    RegisterSpellScript(spell_magmadar_lava_bomb);
 }
-

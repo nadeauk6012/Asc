@@ -29,7 +29,6 @@
 #include "ScriptMgr.h"
 #include "Spell.h"
 #include "Vehicle.h"
-#include "World.h"
 #include "WorldModel.h"
 
 MotionTransport::MotionTransport() : Transport(), _transportInfo(nullptr), _isMoving(true), _pendingStop(false), _triggeredArrivalEvent(false), _triggeredDepartureEvent(false), _passengersLoaded(false), _delayedTeleport(false)
@@ -443,18 +442,11 @@ void MotionTransport::UnloadNonStaticPassengers()
 {
     for (PassengerSet::iterator itr = _passengers.begin(); itr != _passengers.end(); )
     {
-        if ((*itr)->GetTypeId() == TYPEID_PLAYER)
+        if ((*itr)->IsPlayer())
         {
             ++itr;
             continue;
         }
-        //npcbot: do not unload bots
-        if ((*itr)->IsNPCBotOrPet())
-        {
-            ++itr;
-            continue;
-        }
-        //end npcbot
         PassengerSet::iterator itr2 = itr++;
         (*itr2)->AddObjectToRemoveList();
     }
@@ -526,7 +518,7 @@ bool MotionTransport::TeleportTransport(uint32 newMapid, float x, float y, float
         // Teleport players, they need to know it
         for (PassengerSet::iterator itr = _passengers.begin(); itr != _passengers.end(); ++itr)
         {
-            if ((*itr)->GetTypeId() == TYPEID_PLAYER)
+            if ((*itr)->IsPlayer())
             {
                 float destX, destY, destZ, destO;
                 (*itr)->m_movementInfo.transport.pos.GetPosition(destX, destY, destZ, destO);
@@ -565,10 +557,6 @@ void MotionTransport::DelayedTeleportTransport()
         switch (obj->GetTypeId())
         {
             case TYPEID_UNIT:
-                //npcbot: do not add bots to transport (handled inside AI)
-                if (obj->IsNPCBotOrPet())
-                    break;
-                //end npcbot
                 _passengers.erase(obj);
                 if (!obj->ToCreature()->IsPet())
                     obj->ToCreature()->DespawnOrUnsummon();
