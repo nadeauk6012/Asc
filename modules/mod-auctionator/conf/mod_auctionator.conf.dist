@@ -1,0 +1,354 @@
+#
+# Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license: https://github.com/azerothcore/azerothcore-wotlk/blob/master/LICENSE-AGPL3
+#
+
+[worldserver]
+
+########################################
+# Auctionator configuration
+########################################
+#
+#    Auctionator.Enable
+#        Description: Enable my module and print "Hello World" message at server start
+#        Default:     0 - Disabled
+#                     1 - Enabled
+#
+
+Auctionator.Enabled = 1
+
+# the top level account id
+# this is not actually used methinks
+Auctionator.CharacterId = 2
+
+# the character id
+Auctionator.CharacterGuid = 3
+
+########################################
+# Seller configuration
+########################################
+Auctionator.AllianceSeller.Enabled = 1
+Auctionator.AllianceSeller.MaxAuctions = 30000
+
+Auctionator.HordeSeller.Enabled = 1
+Auctionator.HordeSeller.MaxAuctions = 30000
+
+Auctionator.NeutralSeller.Enabled = 1
+Auctionator.NeutralSeller.MaxAuctions = 10000
+
+########################################
+# Bidder/Buyer configuration
+########################################
+Auctionator.AllianceBidder.Enabled = 1
+Auctionator.AllianceBidder.CycleMinutes = 30
+Auctionator.AllianceBidder.MaxPerCycle = 500
+
+Auctionator.HordeBidder.Enabled = 1
+Auctionator.HordeBidder.CycleMinutes = 30
+Auctionator.HordeBidder.MaxPerCycle = 500
+
+Auctionator.NeutralBidder.Enabled = 1
+Auctionator.NeutralBidder.CycleMinutes = 30
+Auctionator.NeutralBidder.MaxPerCycle = 500
+
+
+########################################
+# Limit on the number of items the seller can retrieve in a
+# single query. Not sure this needs to be configurable. but
+# this may be helpful for changing randomness of the auctions.
+# Default is 1000 items.
+########################################
+Auctionator.Seller.QueryLimit = 15000
+
+########################################
+# Default price for items that have a BuyPrice of 0.
+# Default is 1 gold. Note: This is currently unused.
+# Fallback prices are based on Seller x4 or entry x 3.
+########################################
+Auctionator.Seller.DefaultPrice = 10000
+
+########################################
+# Number of auctions added to the AH per run. This needs to
+# be less than the Seller.QueryLimit or you will run out of
+# items. In theory this also needs to be less thatn the number
+# of available items not in the AH though I am not really sure
+# what happens if it's not.
+# Default is 100 per house per cycle.
+########################################
+Auctionator.Seller.AuctionsPerRun = 2500
+
+########################################
+# Allows the bidder to bid on their own auctions.
+# This is useful for testing changes and would also
+# get you more turnover in you auctions.
+# Default is 0 to disable bidding on own auctions.
+########################################
+Auctionator.Bidder.BidOnOwn = 0
+
+########################################
+# Multipliers for seller.
+# CLASS OR SUBCLASS * QUALTY MULTIPLIER = FINAL PRICE 
+# Example: Normal 3.0 * Weapon 3.0 = 9 final price multiplier.
+# NOTE: if mod_auctionator_market_price has an entry for a specific item,
+# multipliers will not take effect. 
+# Multipliers are based on item_template BuyPrice. If no BuyPrice, then uses 4x SellPrice.
+# If no SellPrice or Buyprice, we use the "screw it" method and go based off of entry number 3x.
+# I suggest that if you want more accurate prices to use mod_auctionator_market_price and share it.
+########################################
+
+# Global Multipliers. Does not affect items in mod_auctionator_market_price table.
+Auctionator.Multipliers.Seller.Poor = 1.0
+Auctionator.Multipliers.Seller.Normal = 1.15
+Auctionator.Multipliers.Seller.Uncommon = 1.5
+Auctionator.Multipliers.Seller.Rare = 2.2
+Auctionator.Multipliers.Seller.Epic = 5
+Auctionator.Multipliers.Seller.Legendary = 4.0
+
+# Class specific multipliers
+Auctionator.Multipliers.Seller.Consumables = 2
+Auctionator.Multipliers.Seller.Container = 1.5
+Auctionator.Multipliers.Seller.Weapon = 1.2
+Auctionator.Multipliers.Seller.Gem = 1.2
+Auctionator.Multipliers.Seller.Armor = 1.1
+Auctionator.Multipliers.Seller.Reagent = 1.05
+Auctionator.Multipliers.Seller.Projectile = 1.15
+Auctionator.Multipliers.Seller.TradeGoods = 4
+Auctionator.Multipliers.Seller.Recipe = 1.25
+Auctionator.Multipliers.Seller.Quiver = 1.0
+Auctionator.Multipliers.Seller.Key = 1.0
+Auctionator.Multipliers.Seller.Miscellaneous = 1.1
+Auctionator.Multipliers.Seller.Glyph = 1.2
+
+# Auctionator.Seller.FluctuationMin
+# Defines the minimum price fluctuation percentage for auctioned items.
+# This value sets the lower limit for random price variation, expressed as a percentage of the base price.
+# For example, a value of 0.94 means the item's auction price will not fall below 94% of its base price.
+# Default: 0.94
+Auctionator.Seller.FluctuationMin = 0.85
+
+# Auctionator.Seller.FluctuationMax
+# Specifies the maximum price fluctuation percentage for auctioned items.
+# This value sets the upper limit for random price variation, expressed as a percentage of the base price.
+# For example, a value of 1.06 means the item's auction price will not exceed 106% of its base price.
+# Default: 1.06
+Auctionator.Seller.FluctuationMax = 1.15
+
+#######################################
+# Auctionator Seller Expansion Quality Multipliers
+#######################################
+#    These settings define multipliers for item prices based on their quality and the expansion they belong to.
+#    Vanilla range: item level 1-92, TBC range: item level 93-164, WotLK range: item level 165+.
+#    For items without an item level, or item level of 1, required level is used. This means that some items 
+#    may end up in the Vanilla Multipliers table if they have neither itemlevel or requiredlevel entries. 
+#    Honestly these are probably superfluous settings but may be good for things like consumables, 
+#    lowering uncommon prices for certain expacs, or increasing epic prices
+#    to be more in line with their expansion. Granted, items usually go up in BuyPrice anyway but it's a nice fallback.
+#    Alternatively you could use these values rather than the quality ones up top and set those to 1.
+#    These values are multiplied on top of previous ones.
+#    Default for all: 1.0
+
+# Vanilla Expansion Quality Multipliers
+Auctionator.ExpansionQualityMultipliers.Vanilla.Poor = 1.0
+Auctionator.ExpansionQualityMultipliers.Vanilla.Normal = 1.0
+Auctionator.ExpansionQualityMultipliers.Vanilla.Uncommon = 0.85
+Auctionator.ExpansionQualityMultipliers.Vanilla.Rare = 0.88
+Auctionator.ExpansionQualityMultipliers.Vanilla.Epic = 1.2
+Auctionator.ExpansionQualityMultipliers.Vanilla.Legendary = 1.0
+
+# TBC Expansion Quality Multipliers
+Auctionator.ExpansionQualityMultipliers.TBC.Poor = 1.0
+Auctionator.ExpansionQualityMultipliers.TBC.Normal = 2.0
+Auctionator.ExpansionQualityMultipliers.TBC.Uncommon = 1.0
+Auctionator.ExpansionQualityMultipliers.TBC.Rare = 1.0
+Auctionator.ExpansionQualityMultipliers.TBC.Epic = 1.5
+Auctionator.ExpansionQualityMultipliers.TBC.Legendary = 1.0
+
+# WotLK Expansion Quality Multipliers
+Auctionator.ExpansionQualityMultipliers.WotLK.Poor = 1.0
+Auctionator.ExpansionQualityMultipliers.WotLK.Normal = 3.0
+Auctionator.ExpansionQualityMultipliers.WotLK.Uncommon = 1
+Auctionator.ExpansionQualityMultipliers.WotLK.Rare = 1.2
+Auctionator.ExpansionQualityMultipliers.WotLK.Epic = 2.5
+Auctionator.ExpansionQualityMultipliers.WotLK.Legendary = 1.0
+
+
+#######################################
+# Auctionator Seller Exclusions and Priorities.
+#######################################
+# You may want to exclude said items for better balance in individual progression. 
+# Vanilla has its own set of gems that really shouldn't be using level 70+ gems. Same with TBC and 80+ gems.
+# If you enable trade goods, you also may want to disable the trader 
+# npc script inside your lua_scripts folder.
+#######################################
+
+# Exclude Gems
+# If set to 1, gems will be excluded from auction listings.
+# If set to 0, gems will be included in auction listings.
+# Default: 1 (Exclude Gems)
+Auctionator.Exclude.Gems = 1
+
+# Exclude Enchants
+# If set to 1, enchants, such as scrolls, will be excluded from auction listings.
+# If set to 0, enchants,  such as scrolls, will be included in auction listings.
+# Default: 1 (Exclude Enchants)
+Auctionator.Exclude.Enchants = 1
+
+# Exclude Trade Goods
+# If set to 1, trade goods will be excluded from auction listings.
+# If set to 0, trade goods will be included in auction listings.
+# Default: 1 (Exclude Trade Goods)
+Auctionator.Exclude.TradeGoods = 0
+
+# Exclude Glyphs
+# If set to 1, Glyphs will be excluded from auction listings.
+# If set to 0, Glyphs will be included in auction listings.
+# Default: 1(Exclude Glyphs)
+Auctionator.Exclude.Glyphs = 1
+
+# Exclude Poor Quality Items
+# If set to 1, poor quality (grey) items will be excluded from auction listings.
+# If set to 0, poor quality (grey) items will be included in auction listings.
+# This setting allows more of other auction types that are actually useful.
+# Default: 1 (Exclude Grey Quality Items)
+Auctionator.Seller.ExcludePoorQualityItems = 1
+
+# Prioritize Trade Goods in Auction Listings
+# If set to 1, trade goods (class 7 items) will be prioritized in auction listings.
+# If set to 0, no specific prioritization will be applied to trade goods.
+# Trade goods will be prioritized and appear first, other items will be listed afterward.
+# Note: In order to get items other than trade goods on your Auctionhouse, AuctionsPerRun and QueryLimit must be high enough to do so.
+# Default: 0 (No prioritization)
+Auctionator.Prioritize.TradeGoods = 1
+
+#######################################
+# Exclude Expansion Specific Items
+#######################################
+# These options allow you to exclude items from specific expansions in auction listings.
+# Note: Due to the nature of Blizzard's item implementations, these are approximate ranges.
+# Some items excluded per expansion may include late-game items, such as Sunwell Plans, 
+# or may exclude jewelcrafting in vanilla and inscription in both vanilla and tbc.
+# I suggest disabling later expac items while you level to help fill the auction house.
+# The exclusion also considers the 'RequiredLevel' of items, offering a more comprehensive filter.
+
+# Exclude Vanilla Items
+# If set to 1, Vanilla items (entry range 1-21839 or RequiredLevel 2-60) will be excluded from auction listings.
+# Default: 0 (Include Vanilla Items)
+Auctionator.Exclude.VanillaItems = 0
+
+# Exclude TBC Items
+# If set to 1, TBC items (entry range 21840-34050 or RequiredLevel 61-70) will be excluded from auction listings.
+# Default: 0 (Include TBC Items)
+Auctionator.Exclude.TBCItems = 1
+
+# Exclude WotLK Items
+# If set to 1, WotLK items (entry range 34051-58000 or RequiredLevel 71+) will be excluded from auction listings.
+# Default: 0 (Include WotLK Items)
+Auctionator.Exclude.WotLKItems = 1
+
+########################################
+# Multipliers for bidder prices 
+# TODO: Class multipliers. Right now it's just by quality,
+# so selling your items may be much different than buying.
+# However, if an item is listed in mod_auctionator_market_price,
+# that price will be used instead. When in doubt,
+# set these values high, then use an auctionhouse addon and sell based on that.
+########################################
+Auctionator.Multipliers.Bidder.Poor = 2.0
+Auctionator.Multipliers.Bidder.Normal = 4
+Auctionator.Multipliers.Bidder.Uncommon = 5
+Auctionator.Multipliers.Bidder.Rare = 6
+Auctionator.Multipliers.Bidder.Epic = 7
+Auctionator.Multipliers.Bidder.Legendary = 10.0
+
+
+###################################################################################################
+# LOGGING SYSTEM SETTINGS
+#
+#  Appender config values: Given an appender "name"
+#    Appender.name
+#        Description: Defines 'where to log'.
+#        Format:      Type,LogLevel,Flags,optional1,optional2,optional3
+#
+#                     Type
+#                         0 - (None)
+#                         1 - (Console)
+#                         2 - (File)
+#                         3 - (DB)
+#
+#                     LogLevel
+#                         0 - (Disabled)
+#                         1 - (Fatal)
+#                         2 - (Error)
+#                         3 - (Warning)
+#                         4 - (Info)
+#                         5 - (Debug)
+#                         6 - (Trace)
+#
+#                     Flags:
+#                         0 - None
+#                         1 - Prefix Timestamp to the text
+#                         2 - Prefix Log Level to the text
+#                         4 - Prefix Log Filter type to the text
+#                         8 - Append timestamp to the log file name. Format: YYYY-MM-DD_HH-MM-SS
+#                             (Only used with Type = 2)
+#                        16 - Make a backup of existing file before overwrite
+#                             (Only used with Mode = w)
+#
+#                     Colors (read as optional1 if Type = Console)
+#                         Format: "fatal error warn info debug trace"
+#                         0 - BLACK
+#                         1 - RED
+#                         2 - GREEN
+#                         3 - BROWN
+#                         4 - BLUE
+#                         5 - MAGENTA
+#                         6 - CYAN
+#                         7 - GREY
+#                         8 - YELLOW
+#                         9 - LRED
+#                        10 - LGREEN
+#                        11 - LBLUE
+#                        12 - LMAGENTA
+#                        13 - LCYAN
+#                        14 - WHITE
+#                         Example: "1 9 3 6 5 8"
+#
+#                     File: Name of the file (read as optional1 if Type = File)
+#                         Allows to use one "%s" to create dynamic files
+#
+#                     Mode: Mode to open the file (read as optional2 if Type = File)
+#                          a - (Append)
+#                          w - (Overwrite)
+#
+#                     MaxFileSize: Maximum file size of the log file before creating a new log file
+#                     (read as optional3 if Type = File)
+#                         Size is measured in bytes expressed in a 64-bit unsigned integer.
+#                         Maximum value is 4294967295 (4 GB). Leave blank for no limit.
+#                         NOTE: Does not work with dynamic filenames.
+#                         Example:  536870912 (512 MB)
+#
+
+# note that do to what I think is a bug in the Worldserver you must
+# copy all 3 of these log lines into your worldserver.conf file
+# or else it will not work.
+
+Appender.AuctionatorLog=2,5,0,auctionator.log,w
+Appender.AuctionatorConsole=1,4,0,"1 9 3 6 5 8"
+
+#  Logger config values: Given a logger "name"
+#    Logger.name
+#        Description: Defines 'What to log'
+#        Format:      LogLevel,AppenderList
+#
+#                     LogLevel
+#                         0 - (Disabled)
+#                         1 - (Fatal)
+#                         2 - (Error)
+#                         3 - (Warning)
+#                         4 - (Info)
+#                         5 - (Debug)
+#                         6 - (Trace)
+#
+#                     AppenderList: List of appenders linked to logger
+#                     (Using spaces as separator).
+#
+Logger.auctionator=4,AuctionatorLog AuctionatorConsole

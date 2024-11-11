@@ -1,0 +1,12 @@
+# Enable or Disable the Absorb module DO NOT TOUCH! THIS IS FOR PERSONAL TESTING. DISABLING THE SCRIPT WILL HAVE UNINTENDED CONSEQUENCES
+
+Absorb.Enable = 1
+
+# Restrict the Absorb effect to dungeons only (1 for true, 0 for false)
+Absorb.DungeonsOnly = 0
+
+# Percentage of damage to convert to absorption (e.g., 0.05 for 5%)
+Absorb.Amount = 0.20
+
+# Print damage and absorb values for testing
+Absorb.PrintDamageAndAbsorb = 1

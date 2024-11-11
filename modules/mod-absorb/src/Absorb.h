@@ -1,0 +1,45 @@
+#ifndef AZEROTHCORE_ABSORB_H
+#define AZEROTHCORE_ABSORB_H
+#include "ScriptMgr.h"
+#include "Player.h"
+#include "Config.h"
+#include "Spell.h"
+#include <map>
+#include <unordered_set>
+
+
+enum AbsorbSpells
+{
+    // Blood Strike
+    SPELL_BLOOD_STRIKE1 = 45902,
+    SPELL_BLOOD_STRIKE2 = 49926,
+    SPELL_BLOOD_STRIKE3 = 49927,
+    SPELL_BLOOD_STRIKE4 = 49928,
+    SPELL_BLOOD_STRIKE5 = 49929,
+    SPELL_BLOOD_STRIKE6 = 49930,
+
+    // Heart Strike
+    SPELL_HEART_STRIKE1 = 55050,
+    SPELL_HEART_STRIKE2 = 55258,
+    SPELL_HEART_STRIKE3 = 55259,
+    SPELL_HEART_STRIKE4 = 55260,
+    SPELL_HEART_STRIKE5 = 55261,
+    SPELL_HEART_STRIKE6 = 55262,
+
+    // Obliterate
+    SPELL_OBLITERATE1 = 49020,
+    SPELL_OBLITERATE2 = 51423,
+    SPELL_OBLITERATE3 = 51424,
+    SPELL_OBLITERATE4 = 51425,
+
+    // Scourge Strike
+    SPELL_SCOURGE_STRIKE1 = 55090,
+    SPELL_SCOURGE_STRIKE2 = 55265,
+    SPELL_SCOURGE_STRIKE3 = 55270,
+    SPELL_SCOURGE_STRIKE4 = 55271,
+
+    SPELL_AURA_ABSORPTION = 800032, // Replace with actual Aura ID
+    SPELL_ABSORPTION = 800031 // Replace with actual Absorption spell ID
+};
+
+#endif //AZEROTHCORE_ABSORB_H
